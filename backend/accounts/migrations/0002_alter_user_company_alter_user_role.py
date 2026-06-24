@@ -1,0 +1,34 @@
+import django.db.models.deletion
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ("accounts", "0001_initial"),
+    ]
+
+    operations = [
+        migrations.AlterField(
+            model_name="user",
+            name="company",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="users",
+                to="company.company",
+            ),
+        ),
+        migrations.AlterField(
+            model_name="user",
+            name="role",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="users",
+                to="accounts.role",
+            ),
+        ),
+    ]
