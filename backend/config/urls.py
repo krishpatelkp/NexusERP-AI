@@ -56,4 +56,6 @@ urlpatterns = [
         name="schema-redoc",
     ),
 
+    path("api/employees/", include("employees.urls")),
+
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

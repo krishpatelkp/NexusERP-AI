@@ -17,17 +17,36 @@ class Role(models.Model):
         related_name="roles"
     )
 
-    role_name = models.CharField(max_length=100)
+    role_name = models.CharField(
+        max_length=100
+    )
 
-    role_code = models.CharField(max_length=30)
+    role_code = models.CharField(
+        max_length=30
+    )
 
-    description = models.TextField(blank=True)
+    description = models.TextField(
+        blank=True
+    )
 
-    is_active = models.BooleanField(default=True)
+    permissions = models.ManyToManyField(
+        "Permission",
+        through="RolePermission",
+        related_name="roles",
+        blank=True,
+    )
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(
+        default=True
+    )
 
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
 
     class Meta:
         constraints = [
@@ -42,13 +61,106 @@ class Role(models.Model):
         ]
 
     def save(self, *args, **kwargs):
-        """
-        Store role_code in uppercase.
-        """
-        self.role_code = self.role_code.upper()
-        super().save(*args, **kwargs)
+         if self.role_code:
+            self.role_code = (
+                self.role_code.strip().upper()
+            )
+    
+            super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.company.company_name} - {self.role_name}"
+
+
+class Permission(models.Model):
+    """
+    Stores all permissions available in the ERP.
+    """
+
+    permission_name = models.CharField(
+        max_length=100
+    )
+
+    permission_code = models.CharField(
+        max_length=100,
+        unique=True
+    )
+
+    description = models.TextField(
+        blank=True
+    )
+
+    is_active = models.BooleanField(
+        default=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        ordering = [
+            "permission_code",
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.permission_code:
+            self.permission_code = (
+                self.permission_code.strip().lower()
+            )
+            super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.permission_name} ({self.permission_code})"
+    
+
+class RolePermission(models.Model):
+    """
+    Maps roles to permissions.
+    """
+
+    role = models.ForeignKey(
+        Role,
+        on_delete=models.CASCADE,
+        related_name="role_permissions",
+    )
+
+    permission = models.ForeignKey(
+        Permission,
+        on_delete=models.CASCADE,
+        related_name="role_permissions",
+    )
+
+    is_active = models.BooleanField(
+        default=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    class Meta:
+        ordering = [
+            "role",
+            "permission",
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["role", "permission"],
+                name="unique_role_permission",
+            )
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.role.role_name} -> "
+            f"{self.permission.permission_code}"
+        )
+
 
 
 class User(AbstractBaseUser, PermissionsMixin):
@@ -86,15 +198,25 @@ class User(AbstractBaseUser, PermissionsMixin):
         blank=True
     )
 
-    is_verified = models.BooleanField(default=False)
+    is_verified = models.BooleanField(
+        default=False
+    )
 
-    is_active = models.BooleanField(default=True)
+    is_active = models.BooleanField(
+        default=True
+    )
 
-    is_staff = models.BooleanField(default=False)
+    is_staff = models.BooleanField(
+        default=False
+    )
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
 
-    updated_at = models.DateTimeField(auto_now=True)
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
 
     objects = CustomUserManager()
 
@@ -107,6 +229,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         Require company and role for normal users.
         Allow Django superusers to exist without them.
         """
+        super().clean()
 
         if not self.is_superuser:
 
@@ -119,6 +242,38 @@ class User(AbstractBaseUser, PermissionsMixin):
                 raise ValidationError(
                     {"role": "Role is required."}
                 )
+            
+    def has_perm_code(self, permission_code):
+        """
+        Return True if the user has the specified
+        business permission through their assigned role.
+
+        Examples:
+            user.has_permission("employee.create")
+            user.has_permission("employee.view")
+            user.has_permission("leave.approve")
+        """
+
+        if not self.is_active:
+            return False
+
+        if self.is_superuser:
+            return True
+
+        if self.role is None:
+            return False
+        if not self.role.is_active:
+            return False
+        if not permission_code:
+            return False
+
+        permission_code = permission_code.strip().lower()
+
+        return self.role.role_permissions.filter(
+            permission__permission_code=permission_code,
+            permission__is_active=True,
+            is_active=True,
+        ).exists()
 
     def __str__(self):
         return self.email
