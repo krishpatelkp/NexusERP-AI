@@ -5,6 +5,8 @@ from .views import (
     DepartmentRetrieveUpdateDestroyAPIView,
     DesignationListCreateAPIView,
     DesignationRetrieveUpdateDestroyAPIView,
+    EmployeeListCreateAPIView,
+    EmployeeRetrieveUpdateDestroyAPIView,
 )
 
 
@@ -43,6 +45,22 @@ urlpatterns = [
         "designations/<int:pk>/",
         DesignationRetrieveUpdateDestroyAPIView.as_view(),
         name="designation-detail",
+    ),
+
+    # ==========================================================
+    # EMPLOYEE URLS
+    # ==========================================================
+
+    path(
+        "employees/",
+        EmployeeListCreateAPIView.as_view(),
+        name="employee-list-create",
+    ),
+
+    path(
+        "employees/<int:pk>/",
+        EmployeeRetrieveUpdateDestroyAPIView.as_view(),
+        name="employee-detail",
     ),
 
 ]

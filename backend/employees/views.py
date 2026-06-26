@@ -1,7 +1,6 @@
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 
-
 from accounts.permissions import (
     HasDepartmentCreatePermission,
     HasDepartmentViewPermission,
@@ -11,22 +10,67 @@ from accounts.permissions import (
     HasDesignationViewPermission,
     HasDesignationUpdatePermission,
     HasDesignationDeletePermission,
+    HasEmployeeCreatePermission,
+    HasEmployeeViewPermission,
+    HasEmployeeUpdatePermission,
+    HasEmployeeDeletePermission,
 )
 
 from .models import (
     Department,
     Designation,
+    Employee,
 )
 
 from .serializers import (
     DepartmentSerializer,
     DesignationSerializer,
+    EmployeeSerializer,
 )
 
 
-# ─────────────────────────────────────────
+# ==========================================================
+# EMPLOYEE QUERYSET MIXIN
+# ==========================================================
+
+class EmployeeQuerysetMixin:
+    """
+    Reusable queryset logic for Employee views.
+
+    Both EmployeeListCreateAPIView and
+    EmployeeRetrieveUpdateDestroyAPIView
+    call get_employee_queryset() instead of
+    duplicating the same queryset logic.
+
+    Superusers see all companies.
+    Normal users see only their own company.
+    """
+
+    def get_employee_queryset(self):
+        queryset = (
+            Employee.objects
+            .select_related(
+                "company",
+                "department",
+                "designation",
+                "reporting_manager",
+                "user_account",
+            )
+            .filter(is_active=True)
+            .order_by("employee_id")
+        )
+
+        if self.request.user.is_superuser:
+            return queryset
+
+        return queryset.filter(
+            company=self.request.user.company
+        )
+
+
+# ==========================================================
 # DEPARTMENT LIST & CREATE
-# ─────────────────────────────────────────
+# ==========================================================
 
 class DepartmentListCreateAPIView(
     generics.ListCreateAPIView
@@ -57,7 +101,7 @@ class DepartmentListCreateAPIView(
 
         if self.request.user.is_superuser:
             return queryset
-        
+
         return queryset.filter(
             company=self.request.user.company
         )
@@ -83,19 +127,25 @@ class DepartmentListCreateAPIView(
             permission()
             for permission in permission_classes
         ]
-    
+
     def perform_create(self, serializer):
         """
         Automatically set company from the
         logged-in user instead of trusting
         the client to send it.
         """
-        serializer.save(company=self.request.user.company)
+
+        if self.request.user.is_superuser:
+            serializer.save()
+        else:
+            serializer.save(
+            company=self.request.user.company
+        )
 
 
-# ─────────────────────────────────────────
+# ==========================================================
 # DEPARTMENT DETAIL
-# ─────────────────────────────────────────
+# ==========================================================
 
 class DepartmentRetrieveUpdateDestroyAPIView(
     generics.RetrieveUpdateDestroyAPIView
@@ -120,6 +170,7 @@ class DepartmentRetrieveUpdateDestroyAPIView(
         Superusers can access all departments.
         Normal users can access only their company's departments.
         """
+
         queryset = (
             Department.objects
             .select_related("company")
@@ -129,11 +180,10 @@ class DepartmentRetrieveUpdateDestroyAPIView(
 
         if self.request.user.is_superuser:
             return queryset
-        
+
         return queryset.filter(
             company=self.request.user.company
         )
-                    
 
     def get_permissions(self):
         """
@@ -176,7 +226,7 @@ class DepartmentRetrieveUpdateDestroyAPIView(
         """
 
         instance.is_active = False
-        instance.save(update_fields=["is_active","updated_at"])
+        instance.save(update_fields=["is_active", "updated_at"])
 
 
 # ==========================================================
@@ -230,14 +280,20 @@ class DesignationListCreateAPIView(
             permission()
             for permission in permission_classes
         ]
-    
+
     def perform_create(self, serializer):
         """
         Automatically set company from the
         logged-in user instead of trusting
         the client to send it.
         """
-        serializer.save(company=self.request.user.company)
+
+        if self.request.user.is_superuser:
+            serializer.save()
+        else:
+            serializer.save(
+            company=self.request.user.company
+        )
 
 
 # ==========================================================
@@ -272,7 +328,6 @@ class DesignationRetrieveUpdateDestroyAPIView(
     def get_permissions(self):
 
         if self.request.method == "GET":
-
             permission_classes = (
                 IsAuthenticated,
                 HasDesignationViewPermission,
@@ -282,14 +337,12 @@ class DesignationRetrieveUpdateDestroyAPIView(
             "PUT",
             "PATCH",
         ):
-
             permission_classes = (
                 IsAuthenticated,
                 HasDesignationUpdatePermission,
             )
 
         else:
-
             permission_classes = (
                 IsAuthenticated,
                 HasDesignationDeletePermission,
@@ -306,10 +359,139 @@ class DesignationRetrieveUpdateDestroyAPIView(
         """
 
         instance.is_active = False
-
         instance.save(
             update_fields=[
                 "is_active",
+                "updated_at",
+            ]
+        )
+
+
+# ==========================================================
+# EMPLOYEE LIST & CREATE
+# ==========================================================
+
+class EmployeeListCreateAPIView(
+    EmployeeQuerysetMixin,
+    generics.ListCreateAPIView,
+):
+    """
+    GET:
+        Return all active employees.
+        Filtered by company for normal users.
+        Superusers see all companies.
+
+    POST:
+        Create a new employee.
+        Company is injected from request.user.
+    """
+
+    serializer_class = EmployeeSerializer
+
+    def get_queryset(self):
+        return self.get_employee_queryset()
+
+    def get_permissions(self):
+
+        if self.request.method == "POST":
+            permission_classes = (
+                IsAuthenticated,
+                HasEmployeeCreatePermission,
+            )
+        else:
+            permission_classes = (
+                IsAuthenticated,
+                HasEmployeeViewPermission,
+            )
+
+        return [
+            permission()
+            for permission in permission_classes
+        ]
+
+    def perform_create(self, serializer):
+        """
+        Inject company from the logged-in user.
+        employee_id is auto-generated in the model.
+        """
+
+        if self.request.user.is_superuser:
+            serializer.save()
+        else:
+            serializer.save(
+                company=self.request.user.company
+            )
+
+
+# ==========================================================
+# EMPLOYEE DETAIL
+# ==========================================================
+
+class EmployeeRetrieveUpdateDestroyAPIView(
+    EmployeeQuerysetMixin,
+    generics.RetrieveUpdateDestroyAPIView,
+):
+    """
+    GET:
+        Retrieve a single employee.
+
+    PUT/PATCH:
+        Update employee details.
+
+    DELETE:
+        Soft delete — marks employee inactive.
+        Does not remove from database.
+        Preserves payroll and attendance history.
+    """
+
+    serializer_class = EmployeeSerializer
+
+    def get_queryset(self):
+        return self.get_employee_queryset()
+
+    def get_permissions(self):
+
+        if self.request.method == "GET":
+            permission_classes = (
+                IsAuthenticated,
+                HasEmployeeViewPermission,
+            )
+
+        elif self.request.method in (
+            "PUT",
+            "PATCH",
+        ):
+            permission_classes = (
+                IsAuthenticated,
+                HasEmployeeUpdatePermission,
+            )
+
+        else:
+            permission_classes = (
+                IsAuthenticated,
+                HasEmployeeDeletePermission,
+            )
+
+        return [
+            permission()
+            for permission in permission_classes
+        ]
+
+    def perform_destroy(self, instance):
+        """
+        Soft delete the employee.
+
+        Sets is_active=False and employee_status=Resigned.
+        Does not delete any related data.
+        Attendance, payroll and documents are preserved.
+        """
+
+        instance.is_active = False
+        instance.employee_status = Employee.EmployeeStatus.RESIGNED
+        instance.save(
+            update_fields=[
+                "is_active",
+                "employee_status",
                 "updated_at",
             ]
         )

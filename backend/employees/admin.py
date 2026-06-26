@@ -3,7 +3,9 @@ from django.contrib import admin
 from .models import (
     Department,
     Designation,
+    Employee,
 )
+
 
 
 # ==========================================================
@@ -148,6 +150,150 @@ class DesignationAdmin(admin.ModelAdmin):
         ),
         (
             "Timestamps",
+            {
+                "fields": (
+                    "created_at",
+                    "updated_at",
+                )
+            },
+        ),
+    )
+
+
+# ==========================================================
+# EMPLOYEE ADMIN
+# ==========================================================
+
+@admin.register(Employee)
+class EmployeeAdmin(admin.ModelAdmin):
+    """
+    Manage company employees.
+    """
+
+    list_display = (
+        "employee_id",
+        "full_name",
+        "email",
+        "company",
+        "department",
+        "designation",
+        "employment_type",
+        "employee_status",
+        "is_active",
+        "joining_date",
+    )
+
+    list_select_related = (
+        "company",
+        "department",
+        "designation",
+        "reporting_manager",
+        "user_account",
+    )
+
+    search_fields = (
+        "employee_id",
+        "first_name",
+        "middle_name",
+        "last_name",
+        "email",
+        "phone",
+        "company__company_name",
+        "department__department_name",
+        "designation__designation_name",
+    )
+
+    list_filter = (
+        "company",
+        "department",
+        "designation",
+        "employment_type",
+        "employee_status",
+        "is_active",
+    )
+
+    ordering = (
+        "company",
+        "employee_id",
+    )
+
+    readonly_fields = (
+        "employee_id",
+        "created_at",
+        "updated_at",
+    )
+
+    fieldsets = (
+        (
+            "Employee Information",
+            {
+                "fields": (
+                    "employee_id",
+                    "company",
+                )
+            },
+        ),
+        (
+            "Personal Information",
+            {
+                "fields": (
+                    "first_name",
+                    "middle_name",
+                    "last_name",
+                    "gender",
+                    "date_of_birth",
+                    "marital_status",
+                    "blood_group",
+                    "profile_photo",
+                )
+            },
+        ),
+        (
+            "Contact Information",
+            {
+                "fields": (
+                    "email",
+                    "phone",
+                    "alternate_phone",
+                )
+            },
+        ),
+        (
+            "Organization",
+            {
+                "fields": (
+                    "department",
+                    "designation",
+                    "reporting_manager",
+                    "user_account",
+                    "employment_type",
+                    "joining_date",
+                    "confirmation_date",
+                )
+            },
+        ),
+        (
+            "Salary",
+            {
+                "fields": (
+                    "basic_salary",
+                )
+            },
+        ),
+        (
+            "Status",
+            {
+                "fields": (
+                    "employee_status",
+                    "is_active",
+                    "resignation_date",
+                    "termination_date",
+                    "retirement_date",
+                )
+            },
+        ),
+        (
+            "Audit Information",
             {
                 "fields": (
                     "created_at",
