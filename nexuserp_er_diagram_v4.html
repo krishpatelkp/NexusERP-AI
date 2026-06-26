@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NexusERP AI — ER Diagram v4.0 FINAL</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f4f4f2;
+    color: #1a1a18;
+    padding: 32px 24px;
+  }
+  header {
+    margin-bottom: 24px;
+    border-bottom: 1.5px solid #e0dfd8;
+    padding-bottom: 20px;
+  }
+  header h1 { font-size: 22px; font-weight: 600; color: #26215C; }
+  header p  { font-size: 13px; color: #6b6a63; margin-top: 4px; }
+  .meta { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+  .meta span {
+    font-size: 12px; background: #ededfe; color: #26215C;
+    border: 1px solid #AFA9EC; border-radius: 6px; padding: 3px 10px;
+  }
+  .meta span.final { background: #e1f5ee; color: #04342C; border-color: #5DCAA5; font-weight: 700; }
+  .meta span.warn  { background: #fff4e0; color: #5a3500; border-color: #f0a940; }
+
+  /* Changelog grid */
+  .changelog {
+    background: #fff;
+    border: 1px solid #e0dfd8;
+    border-radius: 10px;
+    padding: 18px 22px;
+    margin-bottom: 22px;
+  }
+  .changelog-title {
+    font-size: 13px; font-weight: 700; color: #26215C;
+    margin-bottom: 12px; letter-spacing: 0.02em;
+  }
+  .cl-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 8px;
+  }
+  .cl-item {
+    display: flex; align-items: flex-start; gap: 8px;
+    font-size: 12px; color: #3a3a36;
+    background: #fafaf8; border: 1px solid #e8e7e0;
+    border-radius: 6px; padding: 8px 10px;
+  }
+  .cl-item.skipped { opacity: 0.55; }
+  .badge {
+    display: inline-block; border-radius: 4px; font-size: 10px;
+    font-weight: 700; padding: 1px 6px; white-space: nowrap; flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .badge.done   { background: #e1f5ee; color: #04342C; }
+  .badge.skip   { background: #f0efe8; color: #6b6a63; }
+
+  /* ERD */
+  #erd-container {
+    background: #fff;
+    border: 1px solid #e0dfd8;
+    border-radius: 12px;
+    padding: 24px;
+    overflow-x: auto;
+  }
+  #erd svg { display: block; min-width: 1050px; }
+
+  footer {
+    margin-top: 20px;
+    font-size: 11px;
+    color: #9a9990;
+    text-align: center;
+  }
+  @media print {
+    body { background: white; padding: 16px; }
+    #erd-container { border: none; padding: 0; overflow: visible; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>NexusERP AI — Entity Relationship Diagram v4.0 <span style="color:#0F6E56">FINAL</span></h1>
+  <p>Enterprise Workflow Automation &amp; Business Intelligence Platform</p>
+  <div class="meta">
+    <span class="final">✅ v4.0 — Schema Frozen</span>
+    <span>35 Tables</span>
+    <span>8 Module Groups</span>
+    <span>PostgreSQL 15+</span>
+    <span>Django REST Framework</span>
+    <span class="warn">⚠️ Do NOT add more tables</span>
+  </div>
+</header>
+
+<div class="changelog">
+  <div class="changelog-title">📋 Final Improvements Applied — v3.0 → v4.0</div>
+  <div class="cl-grid">
+    <div class="cl-item"><span class="badge done">✓ #1</span> Role.company_id added — roles are now per-company, not global</div>
+    <div class="cl-item"><span class="badge done">✓ #2</span> Removed redundant Dept }o--o| Employee "managed by" relation — manager_id FK is sufficient</div>
+    <div class="cl-item"><span class="badge skip">⏭ #3</span> EmployeeDepartmentHistory — skipped (20-day timeline, current dept field is enough)</div>
+    <div class="cl-item"><span class="badge done">✓ #4</span> Payroll.payslip_url added — for PDF download link</div>
+    <div class="cl-item"><span class="badge done">✓ #5</span> Product.default_supplier_id FK added (nullable) — direct supplier reference</div>
+    <div class="cl-item"><span class="badge done">✓ #6</span> Inventory.last_updated_by FK added (nullable Employee)</div>
+    <div class="cl-item"><span class="badge done">✓ #7</span> PurchaseOrder.received_date added</div>
+    <div class="cl-item"><span class="badge done">✓ #8</span> Notification.channel → ENUM: Email | SMS | WhatsApp | Push</div>
+    <div class="cl-item"><span class="badge skip">⏭ #9</span> AIChatHistory temperature/max_tokens — skipped (Ollama handles defaults, not worth storing)</div>
+    <div class="cl-item"><span class="badge done">✓ #10</span> PredictionHistory.execution_time_ms added</div>
+    <div class="cl-item"><span class="badge done">✓ #11</span> AuditLog — perfect, no change</div>
+    <div class="cl-item"><span class="badge done">✓ #12</span> Task.start_date + completed_at added</div>
+    <div class="cl-item"><span class="badge done">✓ #13</span> Announcement.priority ENUM: Low | Medium | High</div>
+    <div class="cl-item"><span class="badge done">✓ #14</span> EmployeeBank account_number noted as plaintext (encrypt in prod)</div>
+    <div class="cl-item"><span class="badge skip">⏭ #15</span> Attendance location/IP — skipped (adds mobile complexity, not core for 20 days)</div>
+  </div>
+</div>
+
+<div id="erd-container"><div id="erd"></div></div>
+<footer>NexusERP AI &mdash; Database Design v4.0 FINAL &mdash; Schema Frozen &mdash; Do not add more tables</footer>
+
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  themeVariables: {
+    darkMode: false,
+    fontSize: '12px',
+    lineColor: '#73726c',
+    textColor: '#1a1a18',
+    primaryColor: '#ededfe',
+    primaryBorderColor: '#534AB7',
+    primaryTextColor: '#26215C',
+    secondaryColor: '#e1f5ee',
+    secondaryBorderColor: '#0F6E56',
+    secondaryTextColor: '#04342C',
+    tertiaryColor: '#faeeda',
+    tertiaryBorderColor: '#BA7517',
+    tertiaryTextColor: '#412402',
+  },
+  er: {
+    diagramPadding: 24,
+    layoutDirection: 'TB',
+    minEntityWidth: 120,
+    minEntityHeight: 80,
+    entityPadding: 15,
+    useMaxWidth: true
+  }
+});
+
+const diagram = `erDiagram
+
+  %% ══════════════════════════════════════════════
+  %% MODULE 1 — COMPANY & AUTH
+  %% ══════════════════════════════════════════════
+
+  COMPANY {
+    bigserial company_id   PK
+    varchar   company_code "UNIQUE"
+    varchar   slug         "UNIQUE"
+    varchar   name
+    varchar   email
+    varchar   phone
+    varchar   website
+    varchar   gst_number   "UNIQUE"
+    varchar   pan_number
+    varchar   industry
+    varchar   timezone
+    varchar   currency
+    varchar   country
+    varchar   state
+    varchar   city
+    varchar   postal_code
+    text      address
+    varchar   logo_url
+    boolean   is_active
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  ROLE {
+    bigserial role_id      PK
+    bigint    company_id   FK  "roles are per-company"
+    varchar   role_name
+    text      description
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  USER {
+    bigserial user_id               PK
+    bigint    company_id            FK
+    bigint    role_id               FK
+    varchar   username              "UNIQUE | INDEX"
+    varchar   email                 "UNIQUE | INDEX"
+    varchar   password_hash
+    boolean   is_email_verified
+    boolean   is_active
+    boolean   is_deleted
+    timestamp deleted_at
+    timestamp last_login
+    int       failed_login_attempts
+    timestamp locked_until
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  OTP_VERIFICATION {
+    bigserial otp_id     PK
+    bigint    user_id    FK
+    varchar   otp_code
+    varchar   purpose
+    boolean   is_used
+    timestamp expires_at
+    timestamp created_at
+  }
+
+  PASSWORD_RESET_TOKEN {
+    bigserial token_id   PK
+    bigint    user_id    FK
+    varchar   token
+    boolean   is_used
+    timestamp expires_at
+    timestamp created_at
+  }
+
+  %% ══════════════════════════════════════════════
+  %% MODULE 2 — HR CORE
+  %% ══════════════════════════════════════════════
+
+  DESIGNATION {
+    bigserial designation_id PK
+    bigint    company_id     FK
+    varchar   title
+    text      description
+    boolean   is_active
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  EMPLOYMENT_TYPE {
+    bigserial employment_type_id PK
+    varchar   name
+    text      description
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  DEPARTMENT {
+    bigserial department_id PK
+    bigint    company_id    FK
+    bigint    manager_id    FK  "nullable Employee, SET NULL"
+    varchar   name
+    text      description
+    boolean   is_active
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  EMPLOYEE {
+    bigserial employee_id              PK
+    bigint    user_id                  FK
+    bigint    department_id            FK
+    bigint    designation_id           FK
+    bigint    employment_type_id       FK
+    varchar   employee_code            "UNIQUE | INDEX"
+    varchar   first_name
+    varchar   last_name
+    varchar   gender
+    date      date_of_birth
+    varchar   phone
+    varchar   alternate_phone
+    varchar   blood_group
+    text      address
+    varchar   city
+    varchar   state
+    varchar   country
+    varchar   postal_code
+    varchar   emergency_contact_name
+    varchar   emergency_contact_phone
+    varchar   profile_picture
+    date      date_of_joining
+    decimal   base_salary
+    boolean   is_active
+    boolean   is_deleted
+    timestamp deleted_at
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  EMPLOYEE_DOCUMENT {
+    bigserial document_id   PK
+    bigint    employee_id   FK
+    varchar   document_type
+    varchar   file_url
+    varchar   file_name
+    timestamp uploaded_at
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  EMPLOYEE_BANK {
+    bigserial bank_id         PK
+    bigint    employee_id     FK
+    varchar   bank_name
+    varchar   account_number  "plaintext — encrypt in prod"
+    varchar   ifsc_code
+    varchar   branch
+    varchar   account_holder
+    boolean   is_primary
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  %% ══════════════════════════════════════════════
+  %% MODULE 3 — ATTENDANCE & LEAVE
+  %% ══════════════════════════════════════════════
+
+  SHIFT {
+    bigserial shift_id   PK
+    bigint    company_id FK
+    varchar   name
+    time      start_time
+    time      end_time
+    text      description
+    boolean   is_active
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  HOLIDAY {
+    bigserial holiday_id   PK
+    bigint    company_id   FK
+    varchar   name
+    date      holiday_date
+    text      description
+    boolean   is_optional
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  ATTENDANCE {
+    bigserial attendance_id   PK
+    bigint    employee_id     FK
+    bigint    shift_id        FK
+    date      attendance_date "INDEX — compare Holiday by date"
+    time      check_in
+    time      check_out
+    varchar   status          "ENUM: Present|Absent|Late|Half_Day|Leave|WFH|On_Duty"
+    text      notes
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  LEAVE_TYPE {
+    bigserial leave_type_id    PK
+    bigint    company_id       FK
+    varchar   name
+    int       max_days_per_year
+    boolean   is_paid
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  LEAVE_REQUEST {
+    bigserial leave_request_id PK
+    bigint    employee_id      FK
+    bigint    leave_type_id    FK
+    bigint    approved_by      FK  "nullable User"
+    date      start_date
+    date      end_date
+    varchar   status           "ENUM: Pending|Approved|Rejected|Cancelled"
+    text      reason
+    text      rejection_reason
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  %% ══════════════════════════════════════════════
+  %% MODULE 4 — PAYROLL
+  %% ══════════════════════════════════════════════
+
+  PAYROLL {
+    bigserial payroll_id      PK
+    bigint    employee_id     FK
+    bigint    employee_bank_id FK  "nullable"
+    bigint    generated_by    FK  "User"
+    bigint    approved_by     FK  "nullable User"
+    int       pay_month
+    int       pay_year
+    decimal   basic_salary
+    decimal   allowances
+    decimal   bonus
+    decimal   tax
+    decimal   deductions
+    decimal   net_salary
+    varchar   payment_method
+    varchar   status
+    date      payment_date
+    varchar   payslip_url     "PDF download link"
+    text      remarks
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  %% ══════════════════════════════════════════════
+  %% MODULE 5 — INVENTORY
+  %% ══════════════════════════════════════════════
+
+  CATEGORY {
+    bigserial category_id PK
+    bigint    company_id  FK
+    varchar   name
+    text      description
+    boolean   is_active
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  SUPPLIER {
+    bigserial supplier_id PK
+    bigint    company_id  FK
+    varchar   name
+    varchar   email
+    varchar   phone
+    text      address
+    boolean   is_active
+    boolean   is_deleted
+    timestamp deleted_at
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  PRODUCT {
+    bigserial product_id          PK
+    bigint    company_id          FK
+    bigint    category_id         FK
+    bigint    default_supplier_id FK  "nullable Supplier"
+    varchar   name
+    varchar   sku                 "UNIQUE | INDEX"
+    varchar   barcode             "UNIQUE | INDEX"
+    varchar   brand
+    varchar   manufacturer
+    varchar   unit
+    varchar   hsn_code
+    text      description
+    decimal   unit_price
+    int       reorder_level
+    date      expiry_date
+    varchar   image_url
+    boolean   is_active
+    boolean   is_deleted
+    timestamp deleted_at
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  INVENTORY {
+    bigserial inventory_id      PK
+    bigint    product_id        FK
+    bigint    last_updated_by   FK  "nullable Employee"
+    int       quantity_on_hand
+    int       quantity_reserved
+    int       minimum_stock
+    int       maximum_stock
+    varchar   warehouse_location
+    timestamp last_updated
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  PURCHASE_ORDER {
+    bigserial purchase_order_id PK
+    bigint    company_id        FK
+    bigint    supplier_id       FK
+    bigint    created_by        FK  "User"
+    bigint    approved_by       FK  "nullable User"
+    bigint    received_by       FK  "nullable User"
+    varchar   po_number         "UNIQUE | INDEX"
+    varchar   invoice_number
+    date      order_date
+    date      expected_delivery
+    date      received_date     "nullable"
+    varchar   status            "ENUM: Draft|Pending|Approved|Delivered|Cancelled"
+    decimal   total_amount
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  PURCHASE_ORDER_ITEM {
+    bigserial item_id           PK
+    bigint    purchase_order_id FK
+    bigint    product_id        FK
+    int       quantity_ordered
+    int       quantity_received
+    decimal   unit_price
+    decimal   total_price
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  %% ══════════════════════════════════════════════
+  %% MODULE 6 — PAYMENTS
+  %% ══════════════════════════════════════════════
+
+  PAYMENT {
+    bigserial payment_id           PK
+    bigint    company_id           FK
+    bigint    created_by           FK  "User"
+    varchar   razorpay_order_id
+    varchar   razorpay_payment_id  "UNIQUE"
+    varchar   razorpay_signature
+    varchar   invoice_number
+    decimal   amount
+    varchar   currency
+    varchar   status               "ENUM: Pending|Success|Failed|Refunded"
+    varchar   purpose
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  TRANSACTION {
+    bigserial transaction_id   PK
+    bigint    payment_id       FK
+    varchar   transaction_ref
+    text      gateway_response
+    varchar   status
+    timestamp transaction_time
+    timestamp created_at
+  }
+
+  %% ══════════════════════════════════════════════
+  %% MODULE 7 — NOTIFICATIONS, ANNOUNCEMENTS, TASKS
+  %% ══════════════════════════════════════════════
+
+  NOTIFICATION {
+    bigserial notification_id PK
+    bigint    user_id         FK
+    bigint    sent_by         FK  "nullable User"
+    varchar   channel         "ENUM: Email|SMS|WhatsApp|Push"
+    varchar   subject
+    text      body
+    varchar   status          "ENUM: Pending|Sent|Failed|Read"
+    boolean   is_read
+    timestamp read_at
+    timestamp sent_at
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  EMAIL_LOG {
+    bigserial email_log_id    PK
+    bigint    notification_id FK
+    varchar   recipient_email
+    varchar   status
+    text      error_message
+    timestamp sent_at
+    timestamp created_at
+  }
+
+  WHATSAPP_LOG {
+    bigserial whatsapp_log_id PK
+    bigint    notification_id FK
+    varchar   recipient_phone
+    varchar   message_id
+    varchar   status
+    text      error_message
+    timestamp sent_at
+    timestamp created_at
+  }
+
+  SMS_LOG {
+    bigserial sms_log_id      PK
+    bigint    notification_id FK
+    varchar   recipient_phone
+    varchar   status
+    text      error_message
+    timestamp sent_at
+    timestamp created_at
+  }
+
+  ANNOUNCEMENT {
+    bigserial announcement_id PK
+    bigint    company_id      FK
+    bigint    created_by      FK  "User"
+    varchar   title
+    text      description
+    varchar   priority        "ENUM: Low|Medium|High"
+    date      expiry_date
+    boolean   is_active
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  TASK {
+    bigserial task_id      PK
+    bigint    company_id   FK
+    bigint    assigned_to  FK  "Employee"
+    bigint    assigned_by  FK  "User"
+    varchar   title
+    text      description
+    varchar   priority     "ENUM: Low|Medium|High|Critical"
+    varchar   status       "ENUM: Pending|In_Progress|Completed|Cancelled"
+    date      start_date
+    date      deadline
+    timestamp completed_at
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  %% ══════════════════════════════════════════════
+  %% MODULE 8 — AI & AUDIT
+  %% ══════════════════════════════════════════════
+
+  AI_CHAT_HISTORY {
+    bigserial chat_id          PK
+    bigint    user_id          FK
+    varchar   session_id
+    varchar   message_role     "ENUM: user|assistant|system"
+    text      prompt
+    text      message
+    varchar   model_name
+    int       response_time_ms
+    int       tokens_used
+    timestamp created_at
+  }
+
+  PREDICTION_HISTORY {
+    bigserial prediction_id    PK
+    bigint    user_id          FK
+    varchar   prediction_type
+    jsonb     input_data
+    jsonb     output_data
+    decimal   confidence_score
+    varchar   model_name
+    int       execution_time_ms
+    timestamp created_at
+  }
+
+  AUDIT_LOG {
+    bigserial audit_id    PK
+    bigint    user_id     FK
+    varchar   action
+    varchar   module
+    varchar   table_name
+    bigint    record_id
+    jsonb     old_data
+    jsonb     new_data
+    varchar   ip_address
+    varchar   device
+    varchar   browser
+    timestamp created_at
+  }
+
+  %% ══════════════════════════════════════════════
+  %% RELATIONSHIPS
+  %% ══════════════════════════════════════════════
+
+  %% — Company is the root of everything —
+  COMPANY ||--o{ ROLE             : "defines"
+  COMPANY ||--o{ USER             : "employs"
+  COMPANY ||--o{ DEPARTMENT       : "has"
+  COMPANY ||--o{ DESIGNATION      : "defines"
+  COMPANY ||--o{ SHIFT            : "runs"
+  COMPANY ||--o{ HOLIDAY          : "declares"
+  COMPANY ||--o{ LEAVE_TYPE       : "defines"
+  COMPANY ||--o{ CATEGORY         : "owns"
+  COMPANY ||--o{ SUPPLIER         : "manages"
+  COMPANY ||--o{ PRODUCT          : "stocks"
+  COMPANY ||--o{ PURCHASE_ORDER   : "places"
+  COMPANY ||--o{ PAYMENT          : "makes"
+  COMPANY ||--o{ ANNOUNCEMENT     : "posts"
+  COMPANY ||--o{ TASK             : "tracks"
+
+  %% — Auth —
+  ROLE    ||--o{ USER                  : "assigned to"
+  USER    ||--o{ OTP_VERIFICATION      : "has"
+  USER    ||--o{ PASSWORD_RESET_TOKEN  : "has"
+  USER    ||--|| EMPLOYEE              : "is"
+  USER    ||--o{ NOTIFICATION          : "receives"
+  USER    ||--o{ AI_CHAT_HISTORY       : "has"
+  USER    ||--o{ PREDICTION_HISTORY    : "runs"
+  USER    ||--o{ AUDIT_LOG             : "generates"
+
+  %% — HR Core —
+  DEPARTMENT      ||--o{ EMPLOYEE          : "contains"
+  DESIGNATION     ||--o{ EMPLOYEE          : "assigned to"
+  EMPLOYMENT_TYPE ||--o{ EMPLOYEE          : "classifies"
+  EMPLOYEE        ||--o{ EMPLOYEE_DOCUMENT : "has"
+  EMPLOYEE        ||--o{ EMPLOYEE_BANK     : "has"
+  EMPLOYEE        ||--o{ PAYROLL           : "receives"
+
+  %% — Attendance & Leave —
+  EMPLOYEE   ||--o{ ATTENDANCE    : "records"
+  EMPLOYEE   ||--o{ LEAVE_REQUEST : "submits"
+  SHIFT      ||--o{ ATTENDANCE    : "defines"
+  LEAVE_TYPE ||--o{ LEAVE_REQUEST : "used in"
+
+  %% — Payroll —
+  EMPLOYEE_BANK ||--o{ PAYROLL : "used in"
+
+  %% — Inventory —
+  CATEGORY  ||--o{ PRODUCT              : "classifies"
+  SUPPLIER  ||--o{ PURCHASE_ORDER       : "fulfils"
+  SUPPLIER  ||--o{ PRODUCT              : "default supplier"
+  PRODUCT   ||--|| INVENTORY            : "tracked in"
+  PRODUCT   ||--o{ PURCHASE_ORDER_ITEM  : "included in"
+  PURCHASE_ORDER ||--o{ PURCHASE_ORDER_ITEM : "contains"
+
+  %% — Payments —
+  PAYMENT ||--o{ TRANSACTION : "generates"
+
+  %% — Notifications —
+  NOTIFICATION ||--o| EMAIL_LOG     : "logged in"
+  NOTIFICATION ||--o| WHATSAPP_LOG  : "logged in"
+  NOTIFICATION ||--o| SMS_LOG       : "logged in"
+`;
+
+try {
+  const { svg } = await mermaid.render('erd-svg', diagram);
+  document.getElementById('erd').innerHTML = svg;
+} catch(e) {
+  document.getElementById('erd').innerHTML =
+    '<p style="color:red;padding:20px;font-size:13px">⚠️ Render error: ' + e.message + '</p>';
+}
+</script>
+</body>
+</html>
