@@ -1,4 +1,5 @@
 from rest_framework import serializers
+import os
 
 from .models import (
     Department,
@@ -7,6 +8,7 @@ from .models import (
     EmployeeAddress,
     EmergencyContact,
     EmployeeBankDetail,
+    EmployeeDocument,
 )
 
 
@@ -1388,5 +1390,212 @@ class EmployeeBankDetailSerializer(
                         )
                     }
                 )
+
+        return attrs
+    
+
+# ==========================================================
+# EMPLOYEE DOCUMENT SERIALIZER
+# ==========================================================
+
+class EmployeeDocumentSerializer(
+    serializers.ModelSerializer
+):
+    """
+    Serializer for the EmployeeDocument model.
+
+    Used for:
+    - Creating employee documents
+    - Updating employee documents
+    - Retrieving employee documents
+    - Listing employee documents
+    """
+
+    class Meta:
+
+        model = EmployeeDocument
+
+        fields = (
+            "id",
+            "employee",
+            "document_type",
+            "document_name",
+            "file",
+            "description",
+            "is_verified",
+            "is_active",
+            "created_at",
+            "updated_at",
+        )
+
+        read_only_fields = (
+            "id",
+            "created_at",
+            "updated_at",
+        )
+
+    # ======================================================
+    # FIELD VALIDATION
+    # ======================================================
+
+    def validate_document_name(
+        self,
+        value,
+    ):
+        value = value.strip()
+
+        if not value:
+
+            raise serializers.ValidationError(
+                "Document name cannot be empty."
+            )
+
+        return value
+
+    def validate_description(
+        self,
+        value,
+    ):
+        return value.strip()
+
+    def validate_file(
+        self,
+        value,
+    ):
+        """
+        Validate uploaded file.
+        """
+
+        allowed_extensions = [
+            ".pdf",
+            ".jpg",
+            ".jpeg",
+            ".png",
+        ]
+
+        extension = os.path.splitext(
+            value.name
+        )[1].lower()
+
+        if extension not in allowed_extensions:
+
+            raise serializers.ValidationError(
+                (
+                    "Only PDF, JPG, JPEG "
+                    "and PNG files are allowed."
+                )
+            )
+
+        max_size = 10 * 1024 * 1024
+
+        if value.size > max_size:
+
+            raise serializers.ValidationError(
+                (
+                    "File size cannot "
+                    "exceed 10 MB."
+                )
+            )
+
+        return value
+
+    # ======================================================
+    # OBJECT VALIDATION
+    # ======================================================
+
+    def validate(
+        self,
+        attrs,
+    ):
+        """
+        Validate company ownership
+        and duplicate documents.
+        """
+
+        request = self.context.get(
+            "request",
+        )
+
+        employee = attrs.get(
+            "employee",
+            getattr(
+                self.instance,
+                "employee",
+                None,
+            ),
+        )
+
+        document_type = attrs.get(
+            "document_type",
+            getattr(
+                self.instance,
+                "document_type",
+                None,
+            ),
+        )
+
+        document_name = attrs.get(
+            "document_name",
+            getattr(
+                self.instance,
+                "document_name",
+                None,
+            ),
+        )
+
+        if employee is None:
+            return attrs
+
+        # ------------------------------------------
+        # Company Isolation
+        # ------------------------------------------
+
+        if (
+            request
+            and not request.user.is_superuser
+            and employee.company
+            != request.user.company
+        ):
+
+            raise serializers.ValidationError(
+                {
+                    "employee":
+                    (
+                        "You can only manage "
+                        "documents for employees "
+                        "in your own company."
+                    )
+                }
+            )
+
+        # ------------------------------------------
+        # Duplicate Document Validation
+        # ------------------------------------------
+
+        queryset = EmployeeDocument.objects.filter(
+            employee=employee,
+            document_type=document_type,
+            document_name=document_name,
+        )
+
+        if self.instance:
+
+            queryset = queryset.exclude(
+                pk=self.instance.pk,
+            )
+
+        if queryset.exists():
+
+            raise serializers.ValidationError(
+                {
+                    "document_name":
+                    (
+                        "A document with this "
+                        "name already exists "
+                        "for this employee "
+                        "and document type."
+                    )
+                }
+            )
 
         return attrs

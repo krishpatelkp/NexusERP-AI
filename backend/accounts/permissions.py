@@ -447,3 +447,35 @@ class HasEmployeeBankDetailDeletePermission(
 ):
     """Allows deleting employee bank details."""
     permission_code = "employee_bank_detail.delete"
+
+
+# ==========================================================
+# EMPLOYEE DOCUMENT PERMISSIONS
+# ==========================================================
+
+class HasEmployeeDocumentCreatePermission(
+    HasPermission,
+):
+    """Allows creating employee documents."""
+    permission_code = "employee_document.create"
+
+
+class HasEmployeeDocumentViewPermission(
+    HasPermission,
+):
+    """Allows viewing employee documents."""
+    permission_code = "employee_document.view"
+
+
+class HasEmployeeDocumentUpdatePermission(
+    HasPermission,
+):
+    """Allows updating employee documents."""
+    permission_code = "employee_document.update"
+
+
+class HasEmployeeDocumentDeletePermission(
+    HasPermission,
+):
+    """Allows deleting employee documents."""
+    permission_code = "employee_document.delete"

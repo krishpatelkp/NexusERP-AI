@@ -357,6 +357,26 @@ PERMISSIONS = [
         "permission_code": "employee_bank_detail.delete",
         "description": "Delete employee bank details",
     },
+    {
+    "permission_name": "Create Employee Document",
+    "permission_code": "employee_document.create",
+    "description": "Create employee documents",
+    },
+    {
+        "permission_name": "View Employee Document",
+        "permission_code": "employee_document.view",
+        "description": "View employee documents",
+    },
+    {
+        "permission_name": "Update Employee Document",
+        "permission_code": "employee_document.update",
+        "description": "Update employee documents",
+    },
+    {
+        "permission_name": "Delete Employee Document",
+        "permission_code": "employee_document.delete",
+        "description": "Delete employee documents",
+    },
 ]
 
 

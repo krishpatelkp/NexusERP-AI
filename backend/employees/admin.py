@@ -7,6 +7,7 @@ from .models import (
     EmployeeAddress,
     EmergencyContact,
     EmployeeBankDetail,
+    EmployeeDocument,
 )
 
 
@@ -579,6 +580,95 @@ class EmployeeBankDetailAdmin(admin.ModelAdmin):
             {
                 "fields": (
                     "is_primary",
+                    "is_active",
+                )
+            },
+        ),
+        (
+            "Timestamps",
+            {
+                "fields": (
+                    "created_at",
+                    "updated_at",
+                )
+            },
+        ),
+    )
+
+
+# ==========================================================
+# EMPLOYEE DOCUMENT ADMIN
+# ==========================================================
+
+@admin.register(EmployeeDocument)
+class EmployeeDocumentAdmin(admin.ModelAdmin):
+    """
+    Manage employee documents.
+    """
+
+    list_display = (
+        "employee",
+        "document_name",
+        "document_type",
+        "is_verified",
+        "is_active",
+        "created_at",
+    )
+
+    list_select_related = (
+        "employee",
+    )
+
+    search_fields = (
+        "employee__employee_id",
+        "employee__first_name",
+        "employee__last_name",
+        "document_name",
+        "description",
+    )
+
+    list_filter = (
+        "document_type",
+        "is_verified",
+        "is_active",
+    )
+
+    ordering = (
+        "employee",
+        "document_type",
+        "document_name",
+    )
+
+    readonly_fields = (
+        "created_at",
+        "updated_at",
+    )
+
+    fieldsets = (
+        (
+            "Employee Information",
+            {
+                "fields": (
+                    "employee",
+                )
+            },
+        ),
+        (
+            "Document Information",
+            {
+                "fields": (
+                    "document_type",
+                    "document_name",
+                    "file",
+                    "description",
+                )
+            },
+        ),
+        (
+            "Status",
+            {
+                "fields": (
+                    "is_verified",
                     "is_active",
                 )
             },

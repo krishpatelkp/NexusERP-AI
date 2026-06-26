@@ -5,6 +5,8 @@ from django.core.validators import RegexValidator, MinValueValidator
 from company.models import Company
 from accounts.models import User
 import re
+import os
+import uuid
 
 
 # ==========================================================
@@ -49,6 +51,35 @@ def validate_profile_photo(file):
         raise ValidationError(
             f"Image size must not exceed {max_size_mb}MB."
         )
+    
+# ==========================================================
+# EMPLOYEE DOCUMENT UPLOAD PATH
+# ==========================================================
+
+def employee_document_upload_path(
+    instance,
+    filename,
+):
+    """
+    Generate a unique upload path for
+    employee documents.
+    """
+
+    extension = os.path.splitext(
+        filename
+    )[1]
+
+    unique_filename = (
+        f"{instance.employee.employee_id}_"
+        f"{instance.document_type.lower()}_"
+        f"{uuid.uuid4().hex}"
+        f"{extension}"
+    )
+
+    return os.path.join(
+        "employee_documents",
+        unique_filename,
+    )
 
 
 # ==========================================================
@@ -1469,4 +1500,238 @@ class EmployeeBankDetail(models.Model):
             f"{self.employee.employee_id}"
             f" - "
             f"{self.bank_name}"
+        )
+    
+
+# ==========================================================
+# EMPLOYEE DOCUMENT MODEL
+# ==========================================================
+
+class EmployeeDocument(models.Model):
+    """
+    Stores employee documents.
+    """
+
+    class DocumentType(models.TextChoices):
+
+        AADHAAR = (
+            "Aadhaar",
+            "Aadhaar",
+        )
+
+        PAN = (
+            "PAN",
+            "PAN",
+        )
+
+        PASSPORT = (
+            "Passport",
+            "Passport",
+        )
+
+        DRIVING_LICENSE = (
+            "Driving License",
+            "Driving License",
+        )
+
+        RESUME = (
+            "Resume",
+            "Resume",
+        )
+
+        OFFER_LETTER = (
+            "Offer Letter",
+            "Offer Letter",
+        )
+
+        EXPERIENCE_LETTER = (
+            "Experience Letter",
+            "Experience Letter",
+        )
+
+        CERTIFICATE = (
+            "Certificate",
+            "Certificate",
+        )
+
+        OTHER = (
+            "Other",
+            "Other",
+        )
+
+    employee = models.ForeignKey(
+        Employee,
+        on_delete=models.CASCADE,
+        related_name="documents",
+    )
+
+    document_type = models.CharField(
+        max_length=30,
+        choices=DocumentType.choices,
+    )
+
+    document_name = models.CharField(
+        max_length=150,
+    )
+
+    file = models.FileField(
+        upload_to=employee_document_upload_path,
+    )
+
+    description = models.TextField(
+        blank=True,
+    )
+
+    is_verified = models.BooleanField(
+        default=False,
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+
+        ordering = [
+            "employee",
+            "document_type",
+            "document_name",
+        ]
+
+        verbose_name = "Employee Document"
+
+        verbose_name_plural = (
+            "Employee Documents"
+        )
+
+        constraints = [
+
+            models.UniqueConstraint(
+                fields=[
+                    "employee",
+                    "document_type",
+                    "document_name",
+                ],
+                name="unique_document_per_employee",
+            ),
+
+        ]
+
+        indexes = [
+
+            models.Index(
+                fields=["employee"],
+            ),
+
+            models.Index(
+                fields=["document_type"],
+            ),
+
+            models.Index(
+                fields=["is_verified"],
+            ),
+
+            models.Index(
+                fields=["is_active"],
+            ),
+
+        ]
+
+    def clean(self):
+        """
+        Validate employee document.
+        """
+
+        super().clean()
+
+        self.document_name = (
+            self.document_name.strip()
+        )
+
+        self.description = (
+            self.description.strip()
+        )
+
+        if not self.document_name:
+
+            raise ValidationError(
+                {
+                    "document_name":
+                    "Document name is required."
+                }
+            )
+
+        if not self.file:
+
+            raise ValidationError(
+                {
+                    "file":
+                    "Document file is required."
+                }
+            )
+
+        allowed_extensions = [
+            ".pdf",
+            ".jpg",
+            ".jpeg",
+            ".png",
+        ]
+
+        extension = os.path.splitext(
+            self.file.name
+        )[1].lower()
+
+        if extension not in allowed_extensions:
+
+            raise ValidationError(
+                {
+                    "file":
+                    (
+                        "Only PDF, JPG, JPEG "
+                        "and PNG files are allowed."
+                    )
+                }
+            )
+
+        max_size = 10 * 1024 * 1024
+
+        if self.file.size > max_size:
+
+            raise ValidationError(
+                {
+                    "file":
+                    (
+                        "File size cannot "
+                        "exceed 10 MB."
+                    )
+                }
+            )
+
+    def save(
+        self,
+        *args,
+        **kwargs,
+    ):
+
+        self.full_clean()
+
+        super().save(
+            *args,
+            **kwargs,
+        )
+
+    def __str__(self):
+
+        return (
+            f"{self.employee.employee_id}"
+            f" - "
+            f"{self.document_name}"
         )

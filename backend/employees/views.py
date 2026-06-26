@@ -1,5 +1,9 @@
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import (
+    MultiPartParser,
+    FormParser,
+)
 
 from accounts.permissions import (
     HasDepartmentCreatePermission,
@@ -26,6 +30,10 @@ from accounts.permissions import (
     HasEmployeeBankDetailViewPermission,
     HasEmployeeBankDetailUpdatePermission,
     HasEmployeeBankDetailDeletePermission,
+    HasEmployeeDocumentCreatePermission,
+    HasEmployeeDocumentViewPermission,
+    HasEmployeeDocumentUpdatePermission,
+    HasEmployeeDocumentDeletePermission,
 )
 
 from .models import (
@@ -35,6 +43,7 @@ from .models import (
     EmployeeAddress,
     EmergencyContact,  
     EmployeeBankDetail, 
+    EmployeeDocument,
 )
 
 from .serializers import (
@@ -44,6 +53,7 @@ from .serializers import (
     EmployeeAddressSerializer,
     EmergencyContactSerializer,
     EmployeeBankDetailSerializer, 
+    EmployeeDocumentSerializer,
 )
 
 
@@ -977,6 +987,173 @@ class EmployeeBankDetailRetrieveUpdateDestroyAPIView(
     ):
         """
         Soft delete the bank detail.
+        """
+
+        instance.is_active = False
+
+        instance.save(
+            update_fields=[
+                "is_active",
+                "updated_at",
+            ]
+        )
+
+# ==========================================================
+# EMPLOYEE DOCUMENT LIST & CREATE
+# ==========================================================
+
+class EmployeeDocumentListCreateAPIView(
+    generics.ListCreateAPIView
+):
+    """
+    GET:
+        Return all active employee documents.
+
+    POST:
+        Upload a new employee document.
+    """
+
+    serializer_class = (
+        EmployeeDocumentSerializer
+    )
+
+    parser_classes = (
+        MultiPartParser,
+        FormParser,
+    )
+
+    def get_queryset(self):
+
+        queryset = (
+            EmployeeDocument.objects
+            .select_related(
+                "employee",
+                "employee__company",
+            )
+            .filter(
+                is_active=True,
+            )
+            .order_by(
+                "employee",
+                "document_type",
+                "document_name",
+            )
+        )
+
+        if self.request.user.is_superuser:
+            return queryset
+
+        return queryset.filter(
+            employee__company=
+            self.request.user.company
+        )
+
+    def get_permissions(self):
+
+        if self.request.method == "POST":
+
+            permission_classes = (
+                IsAuthenticated,
+                HasEmployeeDocumentCreatePermission,
+            )
+
+        else:
+
+            permission_classes = (
+                IsAuthenticated,
+                HasEmployeeDocumentViewPermission,
+            )
+
+        return [
+            permission()
+            for permission in permission_classes
+        ]
+
+
+# ==========================================================
+# EMPLOYEE DOCUMENT DETAIL
+# ==========================================================
+
+class EmployeeDocumentRetrieveUpdateDestroyAPIView(
+    generics.RetrieveUpdateDestroyAPIView
+):
+    """
+    Retrieve, update and
+    soft delete employee documents.
+    """
+
+    serializer_class = (
+        EmployeeDocumentSerializer
+    )
+
+    parser_classes = (
+        MultiPartParser,
+        FormParser,
+    )
+
+    def get_queryset(self):
+
+        queryset = (
+            EmployeeDocument.objects
+            .select_related(
+                "employee",
+                "employee__company",
+            )
+            .filter(
+                is_active=True,
+            )
+            .order_by(
+                "employee",
+                "document_type",
+                "document_name",
+            )
+        )
+
+        if self.request.user.is_superuser:
+            return queryset
+
+        return queryset.filter(
+            employee__company=
+            self.request.user.company
+        )
+
+    def get_permissions(self):
+
+        if self.request.method == "GET":
+
+            permission_classes = (
+                IsAuthenticated,
+                HasEmployeeDocumentViewPermission,
+            )
+
+        elif self.request.method in (
+            "PUT",
+            "PATCH",
+        ):
+
+            permission_classes = (
+                IsAuthenticated,
+                HasEmployeeDocumentUpdatePermission,
+            )
+
+        else:
+
+            permission_classes = (
+                IsAuthenticated,
+                HasEmployeeDocumentDeletePermission,
+            )
+
+        return [
+            permission()
+            for permission in permission_classes
+        ]
+
+    def perform_destroy(
+        self,
+        instance,
+    ):
+        """
+        Soft delete employee document.
         """
 
         instance.is_active = False
