@@ -31,6 +31,18 @@ class AttendanceStatus(models.TextChoices):
     WORK_FROM_HOME = "Work From Home", "Work From Home"
 
 
+class AttendanceSource(models.TextChoices):
+    MANUAL    = "Manual",    "Manual"
+    WEB       = "Web",       "Web"
+    MOBILE    = "Mobile",    "Mobile"
+    BIOMETRIC = "Biometric", "Biometric"
+    API       = "API",       "API"
+
+
+class ApprovalStatus(models.TextChoices):
+    PENDING  = "Pending",  "Pending"
+    APPROVED = "Approved", "Approved"
+    REJECTED = "Rejected", "Rejected"
 
 # ==========================================================
 # HOLIDAY MODEL
@@ -249,6 +261,62 @@ class Attendance(models.Model):
         blank=True,
     )
 
+    # ──────────────────────────────────────
+    # SNAPSHOT FIELDS
+    # ──────────────────────────────────────
+
+    shift_name_snapshot = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Shift name at the time attendance was recorded.",
+    )
+
+    # ──────────────────────────────────────
+    # ATTENDANCE SOURCE
+    # ──────────────────────────────────────
+
+    attendance_source = models.CharField(
+        max_length=20,
+        choices=AttendanceSource.choices,
+        default=AttendanceSource.WEB,
+    )
+
+    attendance_modified = models.BooleanField(
+        default=False,
+        help_text="True if this record was modified after creation.",
+    )
+
+    # ──────────────────────────────────────
+    # APPROVAL
+    # ──────────────────────────────────────
+
+    approval_status = models.CharField(
+        max_length=20,
+        choices=ApprovalStatus.choices,
+        default=ApprovalStatus.APPROVED,
+        help_text="Approval status of this attendance record.",
+    )
+
+    approved_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="approved_attendances",
+        help_text="User who approved this attendance record.",
+    )
+
+    approved_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When this attendance record was approved.",
+    )
+
+    approval_reason = models.TextField(
+        blank=True,
+        help_text="Reason for approval or rejection.",
+    )
+
     is_active = models.BooleanField(
         default=True,
     )
@@ -301,6 +369,9 @@ class Attendance(models.Model):
             models.Index(
                 fields=["is_active"],
             ),
+            models.Index(fields=["attendance_source"]),
+            models.Index(fields=["approval_status"]),
+            models.Index(fields=["attendance_modified"]),
 
         ]
 
@@ -314,7 +385,7 @@ class Attendance(models.Model):
         self,
         *args,
         **kwargs,
-):
+    ):
         """
         Snapshot shift details when creating attendance.
         """
@@ -330,7 +401,10 @@ class Attendance(models.Model):
             if self.scheduled_grace_minutes is None:
                 self.scheduled_grace_minutes = (
                     self.shift.grace_minutes
-            )
+                )
+
+            if not self.shift_name_snapshot:
+                self.shift_name_snapshot = self.shift.shift_name
 
         self.full_clean()
 

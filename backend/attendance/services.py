@@ -321,16 +321,23 @@ class AttendanceCalculationService:
 
     def determine_attendance_status(self, attendance):
         """
-        Determine attendance status.
+        Determine attendance status based on working minutes.
+        Thresholds are read from constants so they can be
+        changed in one place.
         """
+
+        from attendance.constants import (
+            FULL_DAY_MINUTES,
+            HALF_DAY_MINUTES,
+        )
 
         if attendance.check_in is None:
             attendance.status = AttendanceStatus.ABSENT
 
-        elif attendance.working_minutes >= 480:
+        elif attendance.working_minutes >= FULL_DAY_MINUTES:
             attendance.status = AttendanceStatus.PRESENT
 
-        elif attendance.working_minutes >= 240:
+        elif attendance.working_minutes >= HALF_DAY_MINUTES:
             attendance.status = AttendanceStatus.HALF_DAY
 
         else:
