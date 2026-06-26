@@ -1,6 +1,6 @@
 from django.db import models
 from django.core.exceptions import ValidationError
-
+from datetime import datetime, timedelta
 from company.models import Company
 
 
@@ -15,6 +15,20 @@ class HolidayType(models.TextChoices):
     COMPANY = "Company", "Company Holiday"
     OPTIONAL = "Optional", "Optional Holiday"
     OTHER = "Other", "Other"
+
+
+# ==========================================================
+# ATTENDANCE STATUS
+# ==========================================================
+
+class AttendanceStatus(models.TextChoices):
+    PRESENT = "Present", "Present"
+    ABSENT = "Absent", "Absent"
+    HALF_DAY = "Half Day", "Half Day"
+    LEAVE = "Leave", "Leave"
+    HOLIDAY = "Holiday", "Holiday"
+    WEEK_OFF = "Week Off", "Week Off"
+    WORK_FROM_HOME = "Work From Home", "Work From Home"
 
 
 
@@ -155,4 +169,179 @@ class Holiday(models.Model):
         return (
             f"{self.name}"
             f" ({self.date})"
+        )
+    
+
+# ==========================================================
+# ATTENDANCE MODEL
+# ==========================================================
+
+from employees.models import (
+    Employee,
+    Shift,
+)
+
+
+class Attendance(models.Model):
+    """
+    Stores employee attendance.
+
+    Used by:
+    - Leave
+    - Payroll
+    - Reports
+    - AI Analytics
+    """
+
+    employee = models.ForeignKey(
+        Employee,
+        on_delete=models.PROTECT,
+        related_name="attendances",
+    )
+
+    shift = models.ForeignKey(
+        Shift,
+        on_delete=models.PROTECT,
+        related_name="attendances",
+    )
+
+    date = models.DateField()
+
+    scheduled_start_time = models.TimeField()
+
+    scheduled_end_time = models.TimeField()
+
+    scheduled_grace_minutes = models.PositiveIntegerField(null=True, blank=True)
+
+    check_in = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    check_out = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    working_minutes = models.PositiveIntegerField(
+        default=0,
+    )
+
+    late_minutes = models.PositiveIntegerField(
+        default=0,
+    )
+
+    early_exit_minutes = models.PositiveIntegerField(
+        default=0,
+    )
+
+    overtime_minutes = models.PositiveIntegerField(
+        default=0,
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=AttendanceStatus.choices,
+        default=AttendanceStatus.ABSENT,
+    )
+
+    remarks = models.TextField(
+        blank=True,
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+
+        ordering = (
+            "-date",
+            "employee",
+        )
+
+        verbose_name = "Attendance"
+
+        verbose_name_plural = "Attendance"
+
+        constraints = [
+
+            models.UniqueConstraint(
+                fields=(
+                    "employee",
+                    "date",
+                ),
+                name="unique_attendance_per_employee_per_day",
+            ),
+
+        ]
+
+        indexes = [
+
+            models.Index(
+                fields=["employee"],
+            ),
+
+            models.Index(
+                fields=["date"],
+            ),
+
+            models.Index(
+                fields=["status"],
+            ),
+
+            models.Index(
+                fields=["is_active"],
+            ),
+
+        ]
+
+    def clean(self):
+
+        super().clean()
+
+        self.remarks = self.remarks.strip()
+
+    def save(
+        self,
+        *args,
+        **kwargs,
+):
+        """
+        Snapshot shift details when creating attendance.
+        """
+
+        if self.shift:
+
+            if self.scheduled_start_time is None:
+                self.scheduled_start_time = self.shift.start_time
+
+            if self.scheduled_end_time is None:
+                self.scheduled_end_time = self.shift.end_time
+
+            if self.scheduled_grace_minutes is None:
+                self.scheduled_grace_minutes = (
+                    self.shift.grace_minutes
+            )
+
+        self.full_clean()
+
+        super().save(
+            *args,
+            **kwargs,
+        )
+
+    def __str__(self):
+
+        return (
+            f"{self.employee} - "
+            f"{self.date}"
         )

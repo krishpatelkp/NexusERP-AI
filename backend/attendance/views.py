@@ -2,8 +2,20 @@ from django.shortcuts import render
 
 from rest_framework import generics, permissions
 
+from rest_framework.response import Response
+from rest_framework import status
+
 from .models import Holiday
-from .serializers import HolidaySerializer
+
+from .serializers import (
+    HolidaySerializer,
+    CheckInSerializer,
+    CheckOutSerializer,
+)
+
+from .services import (
+    AttendanceCalculationService,
+)
 
 # Create your views here.
 
@@ -94,4 +106,103 @@ class HolidayRetrieveUpdateDestroyAPIView(
             update_fields=[
                 "is_active",
             ]
+        )
+
+    
+# ==========================================================
+# CHECK-IN API
+# ==========================================================
+
+class CheckInAPIView(
+    generics.GenericAPIView,
+):
+    """
+    Employee Check-In API.
+    """
+
+    serializer_class = CheckInSerializer
+
+    permission_classes = (
+        permissions.IsAuthenticated,
+    )
+
+    def post(
+        self,
+        request,
+        *args,
+        **kwargs,
+    ):
+
+        serializer = self.get_serializer(
+            data=request.data,
+        )
+
+        serializer.is_valid(
+            raise_exception=True,
+        )
+
+        service = AttendanceCalculationService(
+            employee=serializer.validated_data["employee"],
+        )
+
+        attendance = service.process_check_in(
+            check_in=serializer.validated_data["check_in"],
+            remarks=serializer.validated_data["remarks"],
+        )
+
+        return Response(
+            {
+                "message": "Check-in successful.",
+                "attendance_id": AttendanceSerializer(attendance).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+    
+# ==========================================================
+# CHECK-OUT API
+# ==========================================================
+
+class CheckOutAPIView(
+    generics.GenericAPIView,
+):
+    """
+    Employee Check-Out API.
+    """
+
+    serializer_class = CheckOutSerializer
+
+    permission_classes = (
+        permissions.IsAuthenticated,
+    )
+
+    def post(
+        self,
+        request,
+        *args,
+        **kwargs,
+    ):
+
+        serializer = self.get_serializer(
+            data=request.data,
+        )
+
+        serializer.is_valid(
+            raise_exception=True,
+        )
+
+        service = AttendanceCalculationService(
+            employee=serializer.validated_data["employee"],
+        )
+
+        attendance = service.process_check_out(
+            check_out=serializer.validated_data["check_out"],
+            remarks=serializer.validated_data["remarks"],
+        )
+
+        return Response(
+            {
+                "message": "Check-out successful.",
+                "attendance_id": AttendanceSerializer(attendance).data,
+            },
+            status=status.HTTP_200_OK,
         )
