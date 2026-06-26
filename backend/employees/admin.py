@@ -8,6 +8,8 @@ from .models import (
     EmergencyContact,
     EmployeeBankDetail,
     EmployeeDocument,
+    Shift,
+    EmployeeShiftAssignment,
 )
 
 
@@ -173,6 +175,23 @@ class EmployeeAdmin(admin.ModelAdmin):
     """
     Manage company employees.
     """
+
+    def get_readonly_fields(
+    self,
+    request,
+    obj=None,
+):
+        """
+        Make company read-only after employee creation.
+        """
+
+        readonly = list(self.readonly_fields)
+
+        if obj:
+            readonly.append("company")
+
+        return readonly
+
 
     list_display = (
         "employee_id",
@@ -669,6 +688,194 @@ class EmployeeDocumentAdmin(admin.ModelAdmin):
             {
                 "fields": (
                     "is_verified",
+                    "is_active",
+                )
+            },
+        ),
+        (
+            "Timestamps",
+            {
+                "fields": (
+                    "created_at",
+                    "updated_at",
+                )
+            },
+        ),
+    )
+
+
+# ==========================================================
+# SHIFT ADMIN
+# ==========================================================
+
+@admin.register(Shift)
+class ShiftAdmin(admin.ModelAdmin):
+    """
+    Manage company work shifts.
+    """
+
+    list_display = (
+        "shift_name",
+        "shift_code",
+        "company",
+        "start_time",
+        "end_time",
+        "working_hours",
+        "grace_minutes",
+        "is_default",
+        "is_active",
+        "created_at",
+    )
+
+    list_select_related = (
+        "company",
+    )
+
+    search_fields = (
+        "shift_name",
+        "shift_code",
+        "company__company_name",
+    )
+
+    list_filter = (
+        "company",
+        "is_default",
+        "is_active",
+    )
+
+    ordering = (
+        "company",
+        "shift_name",
+    )
+
+    readonly_fields = (
+        "working_hours",
+        "created_at",
+        "updated_at",
+    )
+
+    fieldsets = (
+        (
+            "Shift Information",
+            {
+                "fields": (
+                    "company",
+                    "shift_name",
+                    "shift_code",
+                )
+            },
+        ),
+        (
+            "Timing",
+            {
+                "fields": (
+                    "start_time",
+                    "end_time",
+                    "working_hours",
+                    "grace_minutes",
+                )
+            },
+        ),
+        (
+            "Status",
+            {
+                "fields": (
+                    "is_default",
+                    "is_active",
+                )
+            },
+        ),
+        (
+            "Timestamps",
+            {
+                "fields": (
+                    "created_at",
+                    "updated_at",
+                )
+            },
+        ),
+    )
+
+
+# ==========================================================
+# EMPLOYEE SHIFT ASSIGNMENT ADMIN
+# ==========================================================
+
+@admin.register(EmployeeShiftAssignment)
+class EmployeeShiftAssignmentAdmin(admin.ModelAdmin):
+    """
+    Manage employee shift assignments.
+    """
+
+    list_display = (
+        "employee",
+        "shift",
+        "effective_from",
+        "effective_to",
+        "is_active",
+        "created_at",
+    )
+
+    list_select_related = (
+        "employee",
+        "shift",
+        "employee__company",
+    )
+
+    search_fields = (
+        "employee__employee_id",
+        "employee__first_name",
+        "employee__last_name",
+        "shift__shift_name",
+        "remarks",
+    )
+
+    list_filter = (
+        "shift",
+        "is_active",
+        "effective_from",
+    )
+
+    ordering = (
+        "-effective_from",
+    )
+
+    readonly_fields = (
+        "created_at",
+        "updated_at",
+    )
+
+    fieldsets = (
+        (
+            "Assignment Information",
+            {
+                "fields": (
+                    "employee",
+                    "shift",
+                )
+            },
+        ),
+        (
+            "Assignment Period",
+            {
+                "fields": (
+                    "effective_from",
+                    "effective_to",
+                )
+            },
+        ),
+        (
+            "Additional Information",
+            {
+                "fields": (
+                    "remarks",
+                )
+            },
+        ),
+        (
+            "Status",
+            {
+                "fields": (
                     "is_active",
                 )
             },

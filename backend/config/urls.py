@@ -58,4 +58,9 @@ urlpatterns = [
 
     path("api/employees/", include("employees.urls")),
 
+    path(
+        "api/attendance/",
+        include("attendance.urls"),
+    ),
+
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

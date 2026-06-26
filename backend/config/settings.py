@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'reports',
     'company',
     'common',
+    'core',
     'rest_framework_simplejwt',
 ]
 

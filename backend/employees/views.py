@@ -34,6 +34,10 @@ from accounts.permissions import (
     HasEmployeeDocumentViewPermission,
     HasEmployeeDocumentUpdatePermission,
     HasEmployeeDocumentDeletePermission,
+    HasShiftCreatePermission,
+    HasShiftViewPermission,
+    HasShiftUpdatePermission,
+    HasShiftDeletePermission,
 )
 
 from .models import (
@@ -44,6 +48,7 @@ from .models import (
     EmergencyContact,  
     EmployeeBankDetail, 
     EmployeeDocument,
+    Shift,
 )
 
 from .serializers import (
@@ -54,6 +59,7 @@ from .serializers import (
     EmergencyContactSerializer,
     EmployeeBankDetailSerializer, 
     EmployeeDocumentSerializer,
+    ShiftSerializer,
 )
 
 
@@ -1154,6 +1160,147 @@ class EmployeeDocumentRetrieveUpdateDestroyAPIView(
     ):
         """
         Soft delete employee document.
+        """
+
+        instance.is_active = False
+
+        instance.save(
+            update_fields=[
+                "is_active",
+                "updated_at",
+            ]
+        )
+
+
+# ==========================================================
+# SHIFT LIST & CREATE
+# ==========================================================
+
+class ShiftListCreateAPIView(
+    generics.ListCreateAPIView
+):
+    """
+    GET:
+        Return all active shifts.
+
+    POST:
+        Create a new shift.
+    """
+
+    serializer_class = ShiftSerializer
+
+    def get_queryset(self):
+
+        queryset = (
+            Shift.objects
+            .select_related("company")
+            .filter(is_active=True)
+            .order_by("shift_name")
+        )
+
+        if self.request.user.is_superuser:
+            return queryset
+
+        return queryset.filter(
+            company=self.request.user.company
+        )
+
+    def get_permissions(self):
+
+        if self.request.method == "POST":
+
+            permission_classes = (
+                IsAuthenticated,
+                HasShiftCreatePermission,
+            )
+
+        else:
+
+            permission_classes = (
+                IsAuthenticated,
+                HasShiftViewPermission,
+            )
+
+        return [
+            permission()
+            for permission in permission_classes
+        ]
+
+    def perform_create(
+        self,
+        serializer,
+    ):
+        serializer.save(
+            company=self.request.user.company
+        )
+
+
+# ==========================================================
+# SHIFT DETAIL
+# ==========================================================
+
+class ShiftRetrieveUpdateDestroyAPIView(
+    generics.RetrieveUpdateDestroyAPIView
+):
+    """
+    Retrieve, update and
+    soft delete shifts.
+    """
+
+    serializer_class = ShiftSerializer
+
+    def get_queryset(self):
+
+        queryset = (
+            Shift.objects
+            .select_related("company")
+            .filter(is_active=True)
+        )
+
+        if self.request.user.is_superuser:
+            return queryset
+
+        return queryset.filter(
+            company=self.request.user.company
+        )
+
+    def get_permissions(self):
+
+        if self.request.method == "GET":
+
+            permission_classes = (
+                IsAuthenticated,
+                HasShiftViewPermission,
+            )
+
+        elif self.request.method in (
+            "PUT",
+            "PATCH",
+        ):
+
+            permission_classes = (
+                IsAuthenticated,
+                HasShiftUpdatePermission,
+            )
+
+        else:
+
+            permission_classes = (
+                IsAuthenticated,
+                HasShiftDeletePermission,
+            )
+
+        return [
+            permission()
+            for permission in permission_classes
+        ]
+
+    def perform_destroy(
+        self,
+        instance,
+    ):
+        """
+        Soft delete.
         """
 
         instance.is_active = False

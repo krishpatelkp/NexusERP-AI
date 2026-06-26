@@ -1,6 +1,11 @@
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator, MinValueValidator
+from datetime import (
+    date,
+    datetime,
+    timedelta,
+)
 
 from company.models import Company
 from accounts.models import User
@@ -1734,4 +1739,431 @@ class EmployeeDocument(models.Model):
             f"{self.employee.employee_id}"
             f" - "
             f"{self.document_name}"
+        )
+    
+
+from django.db import models
+from django.core.exceptions import ValidationError
+
+from company.models import Company
+
+# Create your models here.
+
+# ==========================================================
+# SHIFT MODEL
+# ==========================================================
+
+class Shift(models.Model):
+    """
+    Stores company work shifts.
+
+    Every company can have multiple shifts,
+    but only one default shift.
+    """
+
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        related_name="shifts",
+    )
+
+    shift_name = models.CharField(
+        max_length=100,
+    )
+
+    shift_code = models.CharField(
+        max_length=20,
+    )
+
+    start_time = models.TimeField()
+
+    end_time = models.TimeField()
+
+    grace_minutes = models.PositiveIntegerField(
+        default=10,
+    )
+
+    is_default = models.BooleanField(
+        default=False,
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+
+        ordering = [
+            "company",
+            "shift_name",
+        ]
+
+        verbose_name = "Shift"
+
+        verbose_name_plural = "Shifts"
+
+        constraints = [
+
+            models.UniqueConstraint(
+                fields=[
+                    "company",
+                    "shift_name",
+                ],
+                name="unique_shift_name_per_company",
+            ),
+
+            models.UniqueConstraint(
+                fields=[
+                    "company",
+                    "shift_code",
+                ],
+                name="unique_shift_code_per_company",
+            ),
+
+        ]
+
+        indexes = [
+
+            models.Index(
+                fields=["company"],
+            ),
+
+            models.Index(
+                fields=["shift_code"],
+            ),
+
+            models.Index(
+                fields=["is_default"],
+            ),
+
+            models.Index(
+                fields=["is_active"],
+            ),
+
+        ]
+
+    @property
+    def working_hours(self):
+        """
+        Calculate working hours.
+
+        Supports overnight shifts.
+        """
+
+        if not self.start_time or not self.end_time:
+            return "-"
+
+        today = datetime.today().date()
+
+        start = datetime.combine(
+            today,
+            self.start_time,
+        )
+
+        end = datetime.combine(
+            today,
+            self.end_time,
+        )
+
+        if end <= start:
+            end += timedelta(days=1)
+
+        return round(
+            (
+                end - start
+            ).total_seconds() / 3600,
+            2,
+        )
+
+    def clean(self):
+
+        super().clean()
+
+        self.shift_name = (
+            self.shift_name.strip()
+        )
+
+        self.shift_code = (
+            self.shift_code.strip().upper()
+        )
+
+        if not self.shift_name:
+
+            raise ValidationError(
+                {
+                    "shift_name":
+                    "Shift name is required."
+                }
+            )
+
+        if not self.shift_code:
+
+            raise ValidationError(
+                {
+                    "shift_code":
+                    "Shift code is required."
+                }
+            )
+
+        if self.grace_minutes > 120:
+
+            raise ValidationError(
+                {
+                    "grace_minutes":
+                    (
+                        "Grace minutes cannot "
+                        "exceed 120."
+                    )
+                }
+            )
+
+        if self.is_default:
+
+            queryset = Shift.objects.filter(
+                company=self.company,
+                is_default=True,
+            )
+
+            if self.pk:
+
+                queryset = queryset.exclude(
+                    pk=self.pk,
+                )
+
+            if queryset.exists():
+
+                raise ValidationError(
+                    {
+                        "is_default":
+                        (
+                            "Only one default "
+                            "shift is allowed "
+                            "per company."
+                        )
+                    }
+                )
+
+    def save(
+        self,
+        *args,
+        **kwargs,
+    ):
+
+        self.full_clean()
+
+        super().save(
+            *args,
+            **kwargs,
+        )
+
+    def __str__(self):
+
+        return (
+            f"{self.company.company_name}"
+            f" - "
+            f"{self.shift_name}"
+        )
+    
+# ==========================================================
+# EMPLOYEE SHIFT ASSIGNMENT MODEL
+# ==========================================================
+
+class EmployeeShiftAssignment(models.Model):
+    """
+    Stores shift assignment history
+    for employees.
+    """
+
+    employee = models.ForeignKey(
+        Employee,
+        on_delete=models.CASCADE,
+        related_name="shift_assignments",
+    )
+
+    shift = models.ForeignKey(
+        Shift,
+        on_delete=models.CASCADE,
+        related_name="employee_assignments",
+    )
+
+    effective_from = models.DateField()
+
+    effective_to = models.DateField(
+        null=True,
+        blank=True,
+    )
+
+    remarks = models.TextField(
+        blank=True,
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+
+        ordering = [
+            "-effective_from",
+        ]
+
+        verbose_name = (
+            "Employee Shift Assignment"
+        )
+
+        verbose_name_plural = (
+            "Employee Shift Assignments"
+        )
+
+        indexes = [
+
+            models.Index(
+                fields=["employee"],
+            ),
+
+            models.Index(
+                fields=["shift"],
+            ),
+
+            models.Index(
+                fields=["effective_from"],
+            ),
+
+            models.Index(
+                fields=["is_active"],
+            ),
+
+        ]
+
+    def clean(self):
+
+        super().clean()
+
+        self.remarks = self.remarks.strip()
+
+        # ------------------------------------------
+        # Company validation
+        # ------------------------------------------
+
+        if (
+            self.employee.company
+            != self.shift.company
+        ):
+
+            raise ValidationError(
+                {
+                    "shift":
+                    (
+                        "Employee and shift "
+                        "must belong to the "
+                        "same company."
+                    )
+                }
+            )
+
+        # ------------------------------------------
+        # Date validation
+        # ------------------------------------------
+
+        if (
+            self.effective_to
+            and self.effective_to
+            < self.effective_from
+        ):
+
+            raise ValidationError(
+                {
+                    "effective_to":
+                    (
+                        "Effective To cannot "
+                        "be earlier than "
+                        "Effective From."
+                    )
+                }
+            )
+
+        # ------------------------------------------
+        # Overlapping assignment validation
+        # ------------------------------------------
+
+        queryset = EmployeeShiftAssignment.objects.filter(
+            employee=self.employee,
+            is_active=True,
+        )
+
+        if self.pk:
+
+            queryset = queryset.exclude(
+                pk=self.pk,
+            )
+
+        for assignment in queryset:
+
+            assignment_end = (
+                assignment.effective_to
+                or date.max
+            )
+
+            current_end = (
+                self.effective_to
+                or date.max
+            )
+
+            overlap = (
+                self.effective_from
+                <= assignment_end
+                and current_end
+                >= assignment.effective_from
+            )
+
+            if overlap:
+
+                raise ValidationError(
+                    {
+                        "effective_from":
+                        (
+                            "This assignment "
+                            "overlaps with an "
+                            "existing shift "
+                            "assignment."
+                        )
+                    }
+                )
+
+    def save(
+        self,
+        *args,
+        **kwargs,
+    ):
+
+        self.full_clean()
+
+        super().save(
+            *args,
+            **kwargs,
+        )
+
+    def __str__(self):
+
+        return (
+            f"{self.employee.employee_id}"
+            f" → "
+            f"{self.shift.shift_name}"
+            f" ({self.effective_from})"
         )

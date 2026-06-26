@@ -479,3 +479,31 @@ class HasEmployeeDocumentDeletePermission(
 ):
     """Allows deleting employee documents."""
     permission_code = "employee_document.delete"
+
+
+# ==========================================================
+# SHIFT PERMISSIONS
+# ==========================================================
+
+class HasShiftCreatePermission(
+    HasPermission,
+):
+    permission_code = "shift.create"
+
+
+class HasShiftViewPermission(
+    HasPermission,
+):
+    permission_code = "shift.view"
+
+
+class HasShiftUpdatePermission(
+    HasPermission,
+):
+    permission_code = "shift.update"
+
+
+class HasShiftDeletePermission(
+    HasPermission,
+):
+    permission_code = "shift.delete"

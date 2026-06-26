@@ -15,6 +15,8 @@ from .views import (
     EmployeeBankDetailRetrieveUpdateDestroyAPIView,
     EmployeeDocumentListCreateAPIView,
     EmployeeDocumentRetrieveUpdateDestroyAPIView,
+    ShiftListCreateAPIView,
+    ShiftRetrieveUpdateDestroyAPIView,
 )
 
 
@@ -134,6 +136,22 @@ urlpatterns = [
         "employee-documents/<int:pk>/",
         EmployeeDocumentRetrieveUpdateDestroyAPIView.as_view(),
         name="employee-document-detail",
+    ),
+
+    # ==========================================================
+# SHIFT URLS
+# ==========================================================
+
+    path(
+        "shifts/",
+        ShiftListCreateAPIView.as_view(),
+        name="shift-list-create",
+    ),
+
+    path(
+        "shifts/<int:pk>/",
+        ShiftRetrieveUpdateDestroyAPIView.as_view(),
+        name="shift-detail",
     ),
 ]
 

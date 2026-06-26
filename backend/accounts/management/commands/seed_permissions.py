@@ -377,6 +377,27 @@ PERMISSIONS = [
         "permission_code": "employee_document.delete",
         "description": "Delete employee documents",
     },
+
+    {
+        "permission_name": "Create Shift",
+        "permission_code": "shift.create",
+        "description": "Create company shifts",
+    },
+    {
+        "permission_name": "View Shift",
+        "permission_code": "shift.view",
+        "description": "View company shifts",
+    },
+    {
+        "permission_name": "Update Shift",
+        "permission_code": "shift.update",
+        "description": "Update company shifts",
+    },
+    {
+        "permission_name": "Delete Shift",
+        "permission_code": "shift.delete",
+        "description": "Delete company shifts",
+    },
 ]
 
 

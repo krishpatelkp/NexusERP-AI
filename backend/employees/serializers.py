@@ -9,6 +9,7 @@ from .models import (
     EmergencyContact,
     EmployeeBankDetail,
     EmployeeDocument,
+    Shift,
 )
 
 
@@ -561,6 +562,19 @@ class EmployeeSerializer(serializers.ModelSerializer):
             "email",
             getattr(self.instance, "email", None),
         )
+
+
+        if (
+            self.instance
+            and "company" in attrs
+            and attrs["company"] != self.instance.company
+        ):
+            raise serializers.ValidationError(
+                {
+                    "company":
+                    "Changing the company of an existing employee is not allowed."
+                }
+            )
 
         department = attrs.get(
             "department",
@@ -1597,5 +1611,244 @@ class EmployeeDocumentSerializer(
                     )
                 }
             )
+
+        return attrs
+    
+
+# ==========================================================
+# SHIFT SERIALIZER
+# ==========================================================
+
+class ShiftSerializer(serializers.ModelSerializer):
+    """
+    Serializer for the Shift model.
+
+    Used for:
+    - Creating shifts
+    - Updating shifts
+    - Retrieving shift details
+    - Listing shifts
+    """
+
+    working_hours = serializers.ReadOnlyField()
+
+    class Meta:
+
+        model = Shift
+
+        fields = (
+            "id",
+            "company",
+            "shift_name",
+            "shift_code",
+            "start_time",
+            "end_time",
+            "grace_minutes",
+            "working_hours",
+            "is_default",
+            "is_active",
+            "created_at",
+            "updated_at",
+        )
+
+        read_only_fields = (
+            "id",
+            "company",
+            "working_hours",
+            "created_at",
+            "updated_at",
+        )
+
+    # ======================================================
+    # FIELD VALIDATION
+    # ======================================================
+
+    def validate_shift_name(
+        self,
+        value,
+    ):
+        value = value.strip()
+
+        if not value:
+            raise serializers.ValidationError(
+                "Shift name cannot be empty."
+            )
+
+        return value
+
+    def validate_shift_code(
+        self,
+        value,
+    ):
+        value = value.strip().upper()
+
+        if not value:
+            raise serializers.ValidationError(
+                "Shift code cannot be empty."
+            )
+
+        return value
+
+    def validate_grace_minutes(
+        self,
+        value,
+    ):
+        if value < 0:
+            raise serializers.ValidationError(
+                "Grace minutes cannot be negative."
+            )
+
+        if value > 120:
+            raise serializers.ValidationError(
+                "Grace minutes cannot exceed 120."
+            )
+
+        return value
+
+    # ======================================================
+    # OBJECT VALIDATION
+    # ======================================================
+
+    def validate(
+        self,
+        attrs,
+    ):
+        """
+        Validate company ownership,
+        uniqueness and timing.
+        """
+
+        request = self.context.get(
+            "request",
+        )
+
+        if self.instance:
+            company = self.instance.company
+        else:
+            company = request.user.company
+
+        shift_name = attrs.get(
+            "shift_name",
+            getattr(
+                self.instance,
+                "shift_name",
+                None,
+            ),
+        )
+
+        shift_code = attrs.get(
+            "shift_code",
+            getattr(
+                self.instance,
+                "shift_code",
+                None,
+            ),
+        )
+
+        is_default = attrs.get(
+            "is_default",
+            getattr(
+                self.instance,
+                "is_default",
+                False,
+            ),
+        )
+
+        start_time = attrs.get(
+            "start_time",
+            getattr(
+                self.instance,
+                "start_time",
+                None,
+            ),
+        )
+
+        end_time = attrs.get(
+            "end_time",
+            getattr(
+                self.instance,
+                "end_time",
+                None,
+            ),
+        )
+
+        queryset = Shift.objects.filter(
+            company=company,
+        )
+
+        if self.instance:
+            queryset = queryset.exclude(
+                pk=self.instance.pk,
+            )
+
+        if queryset.filter(
+            shift_name=shift_name,
+        ).exists():
+
+            raise serializers.ValidationError(
+                {
+                    "shift_name":
+                    (
+                        "Shift name already exists "
+                        "for this company."
+                    )
+                }
+            )
+
+        if queryset.filter(
+            shift_code=shift_code,
+        ).exists():
+
+            raise serializers.ValidationError(
+                {
+                    "shift_code":
+                    (
+                        "Shift code already exists "
+                        "for this company."
+                    )
+                }
+            )
+
+        if (
+            start_time
+            and end_time
+            and start_time == end_time
+        ):
+
+            raise serializers.ValidationError(
+                {
+                    "end_time":
+                    (
+                        "Start time and end time "
+                        "cannot be the same."
+                    )
+                }
+            )
+
+        if is_default:
+
+            default_queryset = Shift.objects.filter(
+                company=company,
+                is_default=True,
+            )
+
+            if self.instance:
+                default_queryset = (
+                    default_queryset.exclude(
+                        pk=self.instance.pk,
+                    )
+                )
+
+            if default_queryset.exists():
+
+                raise serializers.ValidationError(
+                    {
+                        "is_default":
+                        (
+                            "Only one default shift "
+                            "is allowed per company."
+                        )
+                    }
+                )
 
         return attrs
