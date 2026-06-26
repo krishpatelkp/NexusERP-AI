@@ -4,6 +4,7 @@ from django.core.validators import RegexValidator, MinValueValidator
 
 from company.models import Company
 from accounts.models import User
+import re
 
 
 # ==========================================================
@@ -1197,4 +1198,275 @@ class EmergencyContact(models.Model):
             f"{self.employee.employee_id}"
             f" - "
             f"{self.contact_name}"
+        )
+    
+
+# ==========================================================
+# EMPLOYEE BANK DETAIL MODEL
+# ==========================================================
+
+class EmployeeBankDetail(models.Model):
+    """
+    Stores employee bank account details.
+
+    Every employee can have multiple
+    bank accounts, but only one
+    primary account.
+    """
+
+    class AccountType(models.TextChoices):
+
+        SAVINGS = (
+            "Savings",
+            "Savings",
+        )
+
+        CURRENT = (
+            "Current",
+            "Current",
+        )
+
+        SALARY = (
+            "Salary",
+            "Salary",
+        )
+
+    employee = models.ForeignKey(
+        Employee,
+        on_delete=models.CASCADE,
+        related_name="bank_details",
+    )
+
+    bank_name = models.CharField(
+        max_length=100,
+    )
+
+    account_holder_name = models.CharField(
+        max_length=150,
+    )
+
+    account_number = models.CharField(
+        max_length=30,
+    )
+
+    ifsc_code = models.CharField(
+        max_length=11,
+    )
+
+    branch_name = models.CharField(
+        max_length=100,
+    )
+
+    account_type = models.CharField(
+        max_length=20,
+        choices=AccountType.choices,
+    )
+
+    upi_id = models.CharField(
+        max_length=100,
+        blank=True,
+    )
+
+    is_primary = models.BooleanField(
+        default=False,
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+
+        ordering = [
+            "employee",
+            "-is_primary",
+            "bank_name",
+        ]
+
+        verbose_name = "Employee Bank Detail"
+
+        verbose_name_plural = (
+            "Employee Bank Details"
+        )
+
+        constraints = [
+
+            models.UniqueConstraint(
+                fields=[
+                    "employee",
+                    "account_number",
+                ],
+                name="unique_bank_account_per_employee",
+            ),
+
+        ]
+
+        indexes = [
+
+            models.Index(
+                fields=["employee"],
+            ),
+
+            models.Index(
+                fields=["account_number"],
+            ),
+
+            models.Index(
+                fields=["ifsc_code"],
+            ),
+
+            models.Index(
+                fields=["is_primary"],
+            ),
+
+            models.Index(
+                fields=["is_active"],
+            ),
+
+        ]
+
+    def clean(self):
+        """
+        Validate bank details.
+        """
+
+        super().clean()
+
+        text_fields = [
+
+            "bank_name",
+            "account_holder_name",
+            "account_number",
+            "branch_name",
+            "upi_id",
+
+        ]
+
+        for field in text_fields:
+
+            value = getattr(
+                self,
+                field,
+            )
+
+            if value is not None:
+
+                setattr(
+                    self,
+                    field,
+                    value.strip(),
+                )
+
+        self.ifsc_code = (
+            self.ifsc_code.strip().upper()
+        )
+
+        if not self.bank_name:
+
+            raise ValidationError(
+                {
+                    "bank_name":
+                    "Bank name is required."
+                }
+            )
+
+        if not self.account_holder_name:
+
+            raise ValidationError(
+                {
+                    "account_holder_name":
+                    "Account holder name is required."
+                }
+            )
+
+        if not self.account_number:
+
+            raise ValidationError(
+                {
+                    "account_number":
+                    "Account number is required."
+                }
+            )
+
+        if not self.branch_name:
+
+            raise ValidationError(
+                {
+                    "branch_name":
+                    "Branch name is required."
+                }
+            )
+
+        if not re.match(
+            r"^[A-Z]{4}0[A-Z0-9]{6}$",
+            self.ifsc_code,
+        ):
+
+            raise ValidationError(
+                {
+                    "ifsc_code":
+                    (
+                        "Enter a valid "
+                        "IFSC code."
+                    )
+                }
+            )
+
+        if self.is_primary:
+
+            queryset = (
+                EmployeeBankDetail.objects.filter(
+                    employee=self.employee,
+                    is_primary=True,
+                )
+            )
+
+            if self.pk:
+
+                queryset = queryset.exclude(
+                    pk=self.pk,
+                )
+
+            if queryset.exists():
+
+                raise ValidationError(
+                    {
+                        "is_primary":
+                        (
+                            "Only one primary "
+                            "bank account is allowed."
+                        )
+                    }
+                )
+
+    def save(
+        self,
+        *args,
+        **kwargs,
+    ):
+        """
+        Validate before saving.
+        """
+
+        self.full_clean()
+
+        super().save(
+            *args,
+            **kwargs,
+        )
+
+    def __str__(self):
+
+        return (
+            f"{self.employee.employee_id}"
+            f" - "
+            f"{self.bank_name}"
         )

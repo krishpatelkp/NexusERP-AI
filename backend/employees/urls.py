@@ -11,6 +11,8 @@ from .views import (
     EmployeeAddressRetrieveUpdateDestroyAPIView,
     EmergencyContactListCreateAPIView,
     EmergencyContactRetrieveUpdateDestroyAPIView,
+    EmployeeBankDetailListCreateAPIView,
+    EmployeeBankDetailRetrieveUpdateDestroyAPIView,
 )
 
 
@@ -97,6 +99,22 @@ urlpatterns = [
         "emergency-contacts/<int:pk>/",
         EmergencyContactRetrieveUpdateDestroyAPIView.as_view(),
         name="emergency-contact-detail",
+    ),
+
+    # ==========================================================
+# EMPLOYEE BANK DETAIL URLS
+# ==========================================================
+
+    path(
+        "employee-bank-details/",
+        EmployeeBankDetailListCreateAPIView.as_view(),
+        name="employee-bank-detail-list-create",
+    ),
+
+    path(
+        "employee-bank-details/<int:pk>/",
+        EmployeeBankDetailRetrieveUpdateDestroyAPIView.as_view(),
+        name="employee-bank-detail-detail",
     ),
 
 ]

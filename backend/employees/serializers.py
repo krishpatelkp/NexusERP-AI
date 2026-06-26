@@ -6,6 +6,7 @@ from .models import (
     Employee,
     EmployeeAddress,
     EmergencyContact,
+    EmployeeBankDetail,
 )
 
 
@@ -1132,6 +1133,258 @@ class EmergencyContactSerializer(
                             "Only one primary "
                             "emergency contact "
                             "is allowed."
+                        )
+                    }
+                )
+
+        return attrs
+    
+
+# ==========================================================
+# EMPLOYEE BANK DETAIL SERIALIZER
+# ==========================================================
+
+class EmployeeBankDetailSerializer(
+    serializers.ModelSerializer
+):
+    """
+    Serializer for the EmployeeBankDetail model.
+
+    Used for:
+    - Creating bank details
+    - Updating bank details
+    - Retrieving bank details
+    - Listing bank details
+    """
+
+    class Meta:
+
+        model = EmployeeBankDetail
+
+        fields = (
+            "id",
+            "employee",
+            "bank_name",
+            "account_holder_name",
+            "account_number",
+            "ifsc_code",
+            "branch_name",
+            "account_type",
+            "upi_id",
+            "is_primary",
+            "is_active",
+            "created_at",
+            "updated_at",
+        )
+
+        read_only_fields = (
+            "id",
+            "created_at",
+            "updated_at",
+        )
+
+    # ======================================================
+    # FIELD VALIDATION
+    # ======================================================
+
+    def validate_bank_name(
+        self,
+        value,
+    ):
+        value = value.strip()
+
+        if not value:
+
+            raise serializers.ValidationError(
+                "Bank name cannot be empty."
+            )
+
+        return value
+
+    def validate_account_holder_name(
+        self,
+        value,
+    ):
+        value = value.strip()
+
+        if not value:
+
+            raise serializers.ValidationError(
+                "Account holder name cannot be empty."
+            )
+
+        return value
+
+    def validate_account_number(
+        self,
+        value,
+    ):
+        value = value.strip()
+
+        if not value:
+
+            raise serializers.ValidationError(
+                "Account number cannot be empty."
+            )
+
+        return value
+
+    def validate_ifsc_code(
+        self,
+        value,
+    ):
+        value = value.strip().upper()
+
+        if not value:
+
+            raise serializers.ValidationError(
+                "IFSC code cannot be empty."
+            )
+
+        return value
+
+    def validate_branch_name(
+        self,
+        value,
+    ):
+        value = value.strip()
+
+        if not value:
+
+            raise serializers.ValidationError(
+                "Branch name cannot be empty."
+            )
+
+        return value
+
+    def validate_upi_id(
+        self,
+        value,
+    ):
+        return value.strip()
+
+    # ======================================================
+    # OBJECT VALIDATION
+    # ======================================================
+
+    def validate(
+        self,
+        attrs,
+    ):
+        """
+        Validate company ownership,
+        duplicate account numbers,
+        and primary account rules.
+        """
+
+        request = self.context.get(
+            "request",
+        )
+
+        employee = attrs.get(
+            "employee",
+            getattr(
+                self.instance,
+                "employee",
+                None,
+            ),
+        )
+
+        account_number = attrs.get(
+            "account_number",
+            getattr(
+                self.instance,
+                "account_number",
+                None,
+            ),
+        )
+
+        is_primary = attrs.get(
+            "is_primary",
+            getattr(
+                self.instance,
+                "is_primary",
+                False,
+            ),
+        )
+
+        if employee is None:
+            return attrs
+
+        # ------------------------------------------
+        # Company Isolation
+        # ------------------------------------------
+
+        if (
+            request
+            and not request.user.is_superuser
+            and employee.company
+            != request.user.company
+        ):
+            raise serializers.ValidationError(
+                {
+                    "employee":
+                    (
+                        "You can only manage "
+                        "bank details for employees "
+                        "in your own company."
+                    )
+                }
+            )
+
+        # ------------------------------------------
+        # Duplicate Account Number
+        # ------------------------------------------
+
+        queryset = EmployeeBankDetail.objects.filter(
+            employee=employee,
+            account_number=account_number,
+        )
+
+        if self.instance:
+
+            queryset = queryset.exclude(
+                pk=self.instance.pk,
+            )
+
+        if queryset.exists():
+
+            raise serializers.ValidationError(
+                {
+                    "account_number":
+                    (
+                        "This account number "
+                        "already exists for "
+                        "this employee."
+                    )
+                }
+            )
+
+        # ------------------------------------------
+        # Only One Primary Account
+        # ------------------------------------------
+
+        if is_primary:
+
+            queryset = EmployeeBankDetail.objects.filter(
+                employee=employee,
+                is_primary=True,
+            )
+
+            if self.instance:
+
+                queryset = queryset.exclude(
+                    pk=self.instance.pk,
+                )
+
+            if queryset.exists():
+
+                raise serializers.ValidationError(
+                    {
+                        "is_primary":
+                        (
+                            "Only one primary "
+                            "bank account is allowed."
                         )
                     }
                 )

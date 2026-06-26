@@ -415,3 +415,35 @@ class HasEmergencyContactDeletePermission(
 ):
     """Allows deleting emergency contacts."""
     permission_code = "emergency_contact.delete"
+
+
+# ==========================================================
+# EMPLOYEE BANK DETAIL PERMISSIONS
+# ==========================================================
+
+class HasEmployeeBankDetailCreatePermission(
+    HasPermission,
+):
+    """Allows creating employee bank details."""
+    permission_code = "employee_bank_detail.create"
+
+
+class HasEmployeeBankDetailViewPermission(
+    HasPermission,
+):
+    """Allows viewing employee bank details."""
+    permission_code = "employee_bank_detail.view"
+
+
+class HasEmployeeBankDetailUpdatePermission(
+    HasPermission,
+):
+    """Allows updating employee bank details."""
+    permission_code = "employee_bank_detail.update"
+
+
+class HasEmployeeBankDetailDeletePermission(
+    HasPermission,
+):
+    """Allows deleting employee bank details."""
+    permission_code = "employee_bank_detail.delete"

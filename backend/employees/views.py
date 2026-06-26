@@ -22,6 +22,10 @@ from accounts.permissions import (
     HasEmergencyContactViewPermission,
     HasEmergencyContactUpdatePermission,
     HasEmergencyContactDeletePermission,
+    HasEmployeeBankDetailCreatePermission,
+    HasEmployeeBankDetailViewPermission,
+    HasEmployeeBankDetailUpdatePermission,
+    HasEmployeeBankDetailDeletePermission,
 )
 
 from .models import (
@@ -29,7 +33,8 @@ from .models import (
     Designation,
     Employee,
     EmployeeAddress,
-    EmergencyContact,   
+    EmergencyContact,  
+    EmployeeBankDetail, 
 )
 
 from .serializers import (
@@ -37,7 +42,8 @@ from .serializers import (
     DesignationSerializer,
     EmployeeSerializer,
     EmployeeAddressSerializer,
-    EmergencyContactSerializer, 
+    EmergencyContactSerializer,
+    EmployeeBankDetailSerializer, 
 )
 
 
@@ -813,6 +819,164 @@ class EmergencyContactRetrieveUpdateDestroyAPIView(
     ):
         """
         Soft delete the emergency contact.
+        """
+
+        instance.is_active = False
+
+        instance.save(
+            update_fields=[
+                "is_active",
+                "updated_at",
+            ]
+        )
+
+
+# ==========================================================
+# EMPLOYEE BANK DETAIL LIST & CREATE
+# ==========================================================
+
+class EmployeeBankDetailListCreateAPIView(
+    generics.ListCreateAPIView
+):
+    """
+    GET:
+        Return all active employee bank details.
+
+    POST:
+        Create a new employee bank detail.
+    """
+
+    serializer_class = (
+        EmployeeBankDetailSerializer
+    )
+
+    def get_queryset(self):
+
+        queryset = (
+            EmployeeBankDetail.objects
+            .select_related(
+                "employee",
+                "employee__company",
+            )
+            .filter(
+                is_active=True,
+            )
+            .order_by(
+                "employee",
+                "-is_primary",
+                "bank_name",
+            )
+        )
+
+        if self.request.user.is_superuser:
+            return queryset
+
+        return queryset.filter(
+            employee__company=
+            self.request.user.company
+        )
+
+    def get_permissions(self):
+
+        if self.request.method == "POST":
+
+            permission_classes = (
+                IsAuthenticated,
+                HasEmployeeBankDetailCreatePermission,
+            )
+
+        else:
+
+            permission_classes = (
+                IsAuthenticated,
+                HasEmployeeBankDetailViewPermission,
+            )
+
+        return [
+            permission()
+            for permission in permission_classes
+        ]
+
+
+# ==========================================================
+# EMPLOYEE BANK DETAIL DETAIL
+# ==========================================================
+
+class EmployeeBankDetailRetrieveUpdateDestroyAPIView(
+    generics.RetrieveUpdateDestroyAPIView
+):
+    """
+    Retrieve, update and soft delete
+    employee bank details.
+    """
+
+    serializer_class = (
+        EmployeeBankDetailSerializer
+    )
+
+    def get_queryset(self):
+
+        queryset = (
+            EmployeeBankDetail.objects
+            .select_related(
+                "employee",
+                "employee__company",
+            )
+            .filter(
+                is_active=True,
+            )
+            .order_by(
+                "employee",
+                "-is_primary",
+                "bank_name",
+            )
+        )
+
+        if self.request.user.is_superuser:
+            return queryset
+
+        return queryset.filter(
+            employee__company=
+            self.request.user.company
+        )
+
+    def get_permissions(self):
+
+        if self.request.method == "GET":
+
+            permission_classes = (
+                IsAuthenticated,
+                HasEmployeeBankDetailViewPermission,
+            )
+
+        elif self.request.method in (
+            "PUT",
+            "PATCH",
+        ):
+
+            permission_classes = (
+                IsAuthenticated,
+                HasEmployeeBankDetailUpdatePermission,
+            )
+
+        else:
+
+            permission_classes = (
+                IsAuthenticated,
+                HasEmployeeBankDetailDeletePermission,
+            )
+
+        return [
+            permission()
+            for permission in permission_classes
+        ]
+
+    def perform_destroy(
+        self,
+        instance,
+    ):
+        """
+        Soft delete the bank detail.
         """
 
         instance.is_active = False

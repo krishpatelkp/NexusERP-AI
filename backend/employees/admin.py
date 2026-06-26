@@ -6,6 +6,7 @@ from .models import (
     Employee,
     EmployeeAddress,
     EmergencyContact,
+    EmployeeBankDetail,
 )
 
 
@@ -472,6 +473,104 @@ class EmergencyContactAdmin(admin.ModelAdmin):
                     "alternate_phone",
                     "email",
                     "address",
+                )
+            },
+        ),
+        (
+            "Status",
+            {
+                "fields": (
+                    "is_primary",
+                    "is_active",
+                )
+            },
+        ),
+        (
+            "Timestamps",
+            {
+                "fields": (
+                    "created_at",
+                    "updated_at",
+                )
+            },
+        ),
+    )
+
+
+# ==========================================================
+# EMPLOYEE BANK DETAIL ADMIN
+# ==========================================================
+
+@admin.register(EmployeeBankDetail)
+class EmployeeBankDetailAdmin(admin.ModelAdmin):
+    """
+    Manage employee bank details.
+    """
+
+    list_display = (
+        "employee",
+        "bank_name",
+        "account_holder_name",
+        "account_number",
+        "ifsc_code",
+        "account_type",
+        "is_primary",
+        "is_active",
+        "created_at",
+    )
+
+    list_select_related = (
+        "employee",
+    )
+
+    search_fields = (
+        "employee__employee_id",
+        "employee__first_name",
+        "employee__last_name",
+        "bank_name",
+        "account_holder_name",
+        "account_number",
+        "ifsc_code",
+        "upi_id",
+    )
+
+    list_filter = (
+        "account_type",
+        "is_primary",
+        "is_active",
+    )
+
+    ordering = (
+        "employee",
+        "-is_primary",
+        "bank_name",
+    )
+
+    readonly_fields = (
+        "created_at",
+        "updated_at",
+    )
+
+    fieldsets = (
+        (
+            "Employee Information",
+            {
+                "fields": (
+                    "employee",
+                )
+            },
+        ),
+        (
+            "Bank Information",
+            {
+                "fields": (
+                    "bank_name",
+                    "branch_name",
+                    "account_holder_name",
+                    "account_number",
+                    "ifsc_code",
+                    "account_type",
+                    "upi_id",
                 )
             },
         ),

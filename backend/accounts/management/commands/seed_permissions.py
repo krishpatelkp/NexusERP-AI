@@ -336,6 +336,27 @@ PERMISSIONS = [
         "permission_code": "emergency_contact.delete",
         "description": "Delete emergency contacts",
     },
+
+    {
+        "permission_name": "Create Employee Bank Detail",
+        "permission_code": "employee_bank_detail.create",
+        "description": "Create employee bank details",
+    },
+    {
+        "permission_name": "View Employee Bank Detail",
+        "permission_code": "employee_bank_detail.view",
+        "description": "View employee bank details",
+    },
+    {
+        "permission_name": "Update Employee Bank Detail",
+        "permission_code": "employee_bank_detail.update",
+        "description": "Update employee bank details",
+    },
+    {
+        "permission_name": "Delete Employee Bank Detail",
+        "permission_code": "employee_bank_detail.delete",
+        "description": "Delete employee bank details",
+    },
 ]
 
 
