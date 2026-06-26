@@ -19,6 +19,12 @@ class DepartmentSerializer(serializers.ModelSerializer):
     - Updating departments
     - Retrieving department details
     - Listing departments
+
+    Note:
+    'company' is read-only. It is never accepted
+    from the client. Instead it is injected
+    automatically from request.user.company
+    inside perform_create() in the view.
     """
 
     class Meta:
@@ -37,6 +43,7 @@ class DepartmentSerializer(serializers.ModelSerializer):
 
         read_only_fields = (
             "id",
+            "company",
             "created_at",
             "updated_at",
         )
@@ -58,6 +65,7 @@ class DepartmentSerializer(serializers.ModelSerializer):
     def validate_department_code(self, value):
         """
         Ensure the department code is not empty.
+        Automatically converted to uppercase.
         """
 
         value = value.strip().upper()
@@ -73,14 +81,19 @@ class DepartmentSerializer(serializers.ModelSerializer):
         """
         Ensure department name and code
         are unique within the same company.
+
+        Company is resolved from:
+        - self.instance.company  → for updates
+        - request.user.company   → for creates
         """
 
-        company = attrs.get(
-            "company",
-            getattr(self.instance, "company", None),
-        )
+        request = self.context.get("request")
 
-        if company is None:
+        if self.instance:
+            company = self.instance.company
+        elif request and request.user.company:
+            company = request.user.company
+        else:
             return attrs
 
         department_name = attrs.get(
@@ -108,7 +121,8 @@ class DepartmentSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {
                     "department_name":
-                    "Department name already exists for this company."
+                    "Department name already exists "
+                    "for this company."
                 }
             )
 
@@ -118,19 +132,17 @@ class DepartmentSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {
                     "department_code":
-                    "Department code already exists for this company."
+                    "Department code already exists "
+                    "for this company."
                 }
             )
 
         return attrs
-    
+
 
 # ==========================================================
 # DESIGNATION SERIALIZER
 # ==========================================================
-
-from .models import Designation
-
 
 class DesignationSerializer(serializers.ModelSerializer):
     """
@@ -141,6 +153,12 @@ class DesignationSerializer(serializers.ModelSerializer):
     - Updating designations
     - Retrieving designation details
     - Listing designations
+
+    Note:
+    'company' is read-only. It is never accepted
+    from the client. Instead it is injected
+    automatically from request.user.company
+    inside perform_create() in the view.
     """
 
     class Meta:
@@ -159,13 +177,14 @@ class DesignationSerializer(serializers.ModelSerializer):
 
         read_only_fields = (
             "id",
+            "company",
             "created_at",
             "updated_at",
         )
 
     def validate_designation_name(self, value):
         """
-        Validate designation name.
+        Ensure the designation name is not empty.
         """
 
         value = value.strip()
@@ -179,7 +198,8 @@ class DesignationSerializer(serializers.ModelSerializer):
 
     def validate_designation_code(self, value):
         """
-        Validate designation code.
+        Ensure the designation code is not empty.
+        Automatically converted to uppercase.
         """
 
         value = value.strip().upper()
@@ -193,16 +213,21 @@ class DesignationSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         """
-        Validate designation name and code
+        Ensure designation name and code
         are unique within the same company.
+
+        Company is resolved from:
+        - self.instance.company  → for updates
+        - request.user.company   → for creates
         """
 
-        company = attrs.get(
-            "company",
-            getattr(self.instance, "company", None),
-        )
+        request = self.context.get("request")
 
-        if company is None:
+        if self.instance:
+            company = self.instance.company
+        elif request and request.user.company:
+            company = request.user.company
+        else:
             return attrs
 
         designation_name = attrs.get(
@@ -230,7 +255,8 @@ class DesignationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {
                     "designation_name":
-                    "Designation name already exists for this company."
+                    "Designation name already exists "
+                    "for this company."
                 }
             )
 
@@ -240,7 +266,8 @@ class DesignationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {
                     "designation_code":
-                    "Designation code already exists for this company."
+                    "Designation code already exists "
+                    "for this company."
                 }
             )
 

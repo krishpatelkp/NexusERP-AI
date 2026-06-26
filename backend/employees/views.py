@@ -83,6 +83,14 @@ class DepartmentListCreateAPIView(
             permission()
             for permission in permission_classes
         ]
+    
+    def perform_create(self, serializer):
+        """
+        Automatically set company from the
+        logged-in user instead of trusting
+        the client to send it.
+        """
+        serializer.save(company=self.request.user.company)
 
 
 # ─────────────────────────────────────────
@@ -222,6 +230,14 @@ class DesignationListCreateAPIView(
             permission()
             for permission in permission_classes
         ]
+    
+    def perform_create(self, serializer):
+        """
+        Automatically set company from the
+        logged-in user instead of trusting
+        the client to send it.
+        """
+        serializer.save(company=self.request.user.company)
 
 
 # ==========================================================
