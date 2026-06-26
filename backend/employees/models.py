@@ -747,3 +747,454 @@ class Employee(models.Model):
             f"{self.employee_id} - "
             f"{self.full_name}"
         )
+    
+
+# ==========================================================
+# EMPLOYEE ADDRESS MODEL
+# ==========================================================
+
+class EmployeeAddress(models.Model):
+    """
+    Stores employee addresses.
+
+    Every employee can have one Current
+    address and one Permanent address.
+    """
+
+    class AddressType(models.TextChoices):
+        CURRENT = (
+            "Current",
+            "Current",
+        )
+        PERMANENT = (
+            "Permanent",
+            "Permanent",
+        )
+
+    employee = models.ForeignKey(
+        Employee,
+        on_delete=models.CASCADE,
+        related_name="addresses",
+    )
+
+    address_type = models.CharField(
+        max_length=20,
+        choices=AddressType.choices,
+    )
+
+    address_line_1 = models.CharField(
+        max_length=255,
+    )
+
+    address_line_2 = models.CharField(
+        max_length=255,
+        blank=True,
+    )
+
+    city = models.CharField(
+        max_length=100,
+    )
+
+    state = models.CharField(
+        max_length=100,
+    )
+
+    country = models.CharField(
+        max_length=100,
+    )
+
+    postal_code = models.CharField(
+        max_length=20,
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+
+        ordering = [
+            "employee",
+            "address_type",
+        ]
+
+        verbose_name = "Employee Address"
+
+        verbose_name_plural = "Employee Addresses"
+
+        constraints = [
+
+            models.UniqueConstraint(
+                fields=[
+                    "employee",
+                    "address_type",
+                ],
+                name="unique_address_type_per_employee",
+            ),
+
+        ]
+
+        indexes = [
+
+            models.Index(
+                fields=["employee"],
+            ),
+
+            models.Index(
+                fields=["address_type"],
+            ),
+
+            models.Index(
+                fields=["is_active"],
+            ),
+
+        ]
+
+    def clean(self):
+        """
+        Validate address details.
+        """
+
+        super().clean()
+
+        text_fields = [
+
+            "address_line_1",
+            "address_line_2",
+            "city",
+            "state",
+            "country",
+            "postal_code",
+
+        ]
+
+        for field in text_fields:
+
+            value = getattr(
+                self,
+                field,
+            )
+
+            if value is not None:
+
+                setattr(
+                    self,
+                    field,
+                    value.strip(),
+                )
+
+        required_fields = {
+
+            "address_line_1":
+            "Address Line 1 is required.",
+
+            "city":
+            "City is required.",
+
+            "state":
+            "State is required.",
+
+            "country":
+            "Country is required.",
+
+            "postal_code":
+            "Postal code is required.",
+
+        }
+
+        for field, message in required_fields.items():
+
+            if not getattr(
+                self,
+                field,
+            ):
+                raise ValidationError(
+                    {
+                        field: message,
+                    }
+                )
+
+    def save(self, *args, **kwargs):
+        """
+        Validate before saving.
+        """
+
+        self.full_clean()
+
+        super().save(
+            *args,
+            **kwargs,
+        )
+
+    def __str__(self):
+
+        return (
+            f"{self.employee.employee_id}"
+            f" - "
+            f"{self.address_type}"
+        )
+    
+
+
+# ==========================================================
+# EMERGENCY CONTACT MODEL
+# ==========================================================
+
+class EmergencyContact(models.Model):
+    """
+    Stores emergency contact information
+    for employees.
+
+    Every employee can have multiple
+    emergency contacts, but only one
+    primary emergency contact.
+    """
+
+    class Relationship(models.TextChoices):
+
+        FATHER = (
+            "Father",
+            "Father",
+        )
+
+        MOTHER = (
+            "Mother",
+            "Mother",
+        )
+
+        SPOUSE = (
+            "Spouse",
+            "Spouse",
+        )
+
+        BROTHER = (
+            "Brother",
+            "Brother",
+        )
+
+        SISTER = (
+            "Sister",
+            "Sister",
+        )
+
+        GUARDIAN = (
+            "Guardian",
+            "Guardian",
+        )
+
+        FRIEND = (
+            "Friend",
+            "Friend",
+        )
+
+        OTHER = (
+            "Other",
+            "Other",
+        )
+
+    employee = models.ForeignKey(
+        Employee,
+        on_delete=models.CASCADE,
+        related_name="emergency_contacts",
+    )
+
+    contact_name = models.CharField(
+        max_length=100,
+    )
+
+    relationship = models.CharField(
+        max_length=20,
+        choices=Relationship.choices,
+    )
+
+    phone = models.CharField(
+        max_length=15,
+    )
+
+    alternate_phone = models.CharField(
+        max_length=15,
+        blank=True,
+    )
+
+    email = models.EmailField(
+        blank=True,
+    )
+
+    address = models.TextField(
+        blank=True,
+    )
+
+    is_primary = models.BooleanField(
+        default=False,
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+
+        ordering = [
+            "employee",
+            "-is_primary",
+            "contact_name",
+        ]
+
+        verbose_name = "Emergency Contact"
+
+        verbose_name_plural = (
+            "Emergency Contacts"
+        )
+
+        constraints = [
+
+            models.UniqueConstraint(
+                fields=[
+                    "employee",
+                    "phone",
+                ],
+                name="unique_emergency_phone_per_employee",
+            ),
+
+        ]
+
+        indexes = [
+
+            models.Index(
+                fields=["employee"],
+            ),
+
+            models.Index(
+                fields=["relationship"],
+            ),
+
+            models.Index(
+                fields=["phone"],
+            ),
+
+            models.Index(
+                fields=["is_primary"],
+            ),
+
+            models.Index(
+                fields=["is_active"],
+            ),
+
+        ]
+
+    def clean(self):
+        """
+        Validate emergency contact data.
+        """
+
+        super().clean()
+
+        text_fields = [
+
+            "contact_name",
+            "phone",
+            "alternate_phone",
+            "address",
+
+        ]
+
+        for field in text_fields:
+
+            value = getattr(
+                self,
+                field,
+            )
+
+            if value is not None:
+
+                setattr(
+                    self,
+                    field,
+                    value.strip(),
+                )
+
+        if not self.contact_name:
+
+            raise ValidationError(
+                {
+                    "contact_name":
+                    "Contact name is required."
+                }
+            )
+
+        if not self.phone:
+
+            raise ValidationError(
+                {
+                    "phone":
+                    "Phone number is required."
+                }
+            )
+
+        if self.is_primary:
+
+            queryset = (
+                EmergencyContact.objects.filter(
+                    employee=self.employee,
+                    is_primary=True,
+                )
+            )
+
+            if self.pk:
+
+                queryset = queryset.exclude(
+                    pk=self.pk,
+                )
+
+            if queryset.exists():
+
+                raise ValidationError(
+                    {
+                        "is_primary":
+                        (
+                            "Only one primary "
+                            "emergency contact "
+                            "is allowed."
+                        )
+                    }
+                )
+
+    def save(
+        self,
+        *args,
+        **kwargs,
+    ):
+        """
+        Validate before saving.
+        """
+
+        self.full_clean()
+
+        super().save(
+            *args,
+            **kwargs,
+        )
+
+    def __str__(self):
+
+        return (
+            f"{self.employee.employee_id}"
+            f" - "
+            f"{self.contact_name}"
+        )

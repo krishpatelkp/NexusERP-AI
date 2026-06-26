@@ -4,6 +4,8 @@ from .models import (
     Department,
     Designation,
     Employee,
+    EmployeeAddress,
+    EmergencyContact,
 )
 
 
@@ -713,5 +715,425 @@ class EmployeeSerializer(serializers.ModelSerializer):
                     "when status is Retired."
                 }
             )
+
+        return attrs
+    
+
+# ==========================================================
+# EMPLOYEE ADDRESS SERIALIZER
+# ==========================================================
+
+class EmployeeAddressSerializer(
+    serializers.ModelSerializer
+):
+    """
+    Serializer for the EmployeeAddress model.
+
+    Used for:
+    - Creating employee addresses
+    - Updating employee addresses
+    - Retrieving employee address details
+    - Listing employee addresses
+    """
+
+    class Meta:
+
+        model = EmployeeAddress
+
+        fields = (
+            "id",
+            "employee",
+            "address_type",
+            "address_line_1",
+            "address_line_2",
+            "city",
+            "state",
+            "country",
+            "postal_code",
+            "is_active",
+            "created_at",
+            "updated_at",
+        )
+
+        read_only_fields = (
+            "id",
+            "created_at",
+            "updated_at",
+        )
+
+    # ======================================================
+    # FIELD VALIDATION
+    # ======================================================
+
+    def validate_address_line_1(
+        self,
+        value,
+    ):
+        value = value.strip()
+
+        if not value:
+            raise serializers.ValidationError(
+                "Address Line 1 cannot be empty."
+            )
+
+        return value
+
+    def validate_address_line_2(
+        self,
+        value,
+    ):
+        return value.strip()
+
+    def validate_city(
+        self,
+        value,
+    ):
+        value = value.strip()
+
+        if not value:
+            raise serializers.ValidationError(
+                "City cannot be empty."
+            )
+
+        return value
+
+    def validate_state(
+        self,
+        value,
+    ):
+        value = value.strip()
+
+        if not value:
+            raise serializers.ValidationError(
+                "State cannot be empty."
+            )
+
+        return value
+
+    def validate_country(
+        self,
+        value,
+    ):
+        value = value.strip()
+
+        if not value:
+            raise serializers.ValidationError(
+                "Country cannot be empty."
+            )
+
+        return value
+
+    def validate_postal_code(
+        self,
+        value,
+    ):
+        value = value.strip()
+
+        if not value:
+            raise serializers.ValidationError(
+                "Postal code cannot be empty."
+            )
+
+        return value
+
+    # ======================================================
+    # OBJECT VALIDATION
+    # ======================================================
+
+    def validate(
+        self,
+        attrs,
+    ):
+        """
+        Validate address ownership and ensure
+        only one address of each type exists
+        for an employee.
+        """
+
+        request = self.context.get(
+            "request",
+        )
+
+        employee = attrs.get(
+            "employee",
+            getattr(
+                self.instance,
+                "employee",
+                None,
+            ),
+        )
+
+        address_type = attrs.get(
+            "address_type",
+            getattr(
+                self.instance,
+                "address_type",
+                None,
+            ),
+        )
+
+        if employee is None:
+            return attrs
+
+        # ------------------------------------------
+        # Company isolation
+        # ------------------------------------------
+
+        if (
+            request
+            and not request.user.is_superuser
+            and employee.company
+            != request.user.company
+        ):
+            raise serializers.ValidationError(
+                {
+                    "employee":
+                    (
+                        "You can only manage "
+                        "addresses for employees "
+                        "in your own company."
+                    )
+                }
+            )
+
+        # ------------------------------------------
+        # Prevent duplicate address types
+        # ------------------------------------------
+
+        queryset = EmployeeAddress.objects.filter(
+            employee=employee,
+            address_type=address_type,
+        )
+
+        if self.instance:
+
+            queryset = queryset.exclude(
+                pk=self.instance.pk
+            )
+
+        if queryset.exists():
+
+            raise serializers.ValidationError(
+                {
+                    "address_type":
+                    (
+                        "This employee already "
+                        "has this address type."
+                    )
+                }
+            )
+
+        return attrs
+    
+
+# ==========================================================
+# EMERGENCY CONTACT SERIALIZER
+# ==========================================================
+
+class EmergencyContactSerializer(
+    serializers.ModelSerializer
+):
+    """
+    Serializer for the EmergencyContact model.
+
+    Used for:
+    - Creating emergency contacts
+    - Updating emergency contacts
+    - Retrieving emergency contact details
+    - Listing emergency contacts
+    """
+
+    class Meta:
+
+        model = EmergencyContact
+
+        fields = (
+            "id",
+            "employee",
+            "contact_name",
+            "relationship",
+            "phone",
+            "alternate_phone",
+            "email",
+            "address",
+            "is_primary",
+            "is_active",
+            "created_at",
+            "updated_at",
+        )
+
+        read_only_fields = (
+            "id",
+            "created_at",
+            "updated_at",
+        )
+
+    # ======================================================
+    # FIELD VALIDATION
+    # ======================================================
+
+    def validate_contact_name(
+        self,
+        value,
+    ):
+        value = value.strip()
+
+        if not value:
+            raise serializers.ValidationError(
+                "Contact name cannot be empty."
+            )
+
+        return value
+
+    def validate_phone(
+        self,
+        value,
+    ):
+        value = value.strip()
+
+        if not value:
+            raise serializers.ValidationError(
+                "Phone number cannot be empty."
+            )
+
+        return value
+
+    def validate_alternate_phone(
+        self,
+        value,
+    ):
+        return value.strip()
+
+    def validate_address(
+        self,
+        value,
+    ):
+        return value.strip()
+
+    # ======================================================
+    # OBJECT VALIDATION
+    # ======================================================
+
+    def validate(
+        self,
+        attrs,
+    ):
+        """
+        Validate company ownership,
+        duplicate phone numbers,
+        and primary contact rules.
+        """
+
+        request = self.context.get(
+            "request",
+        )
+
+        employee = attrs.get(
+            "employee",
+            getattr(
+                self.instance,
+                "employee",
+                None,
+            ),
+        )
+
+        phone = attrs.get(
+            "phone",
+            getattr(
+                self.instance,
+                "phone",
+                None,
+            ),
+        )
+
+        is_primary = attrs.get(
+            "is_primary",
+            getattr(
+                self.instance,
+                "is_primary",
+                False,
+            ),
+        )
+
+        if employee is None:
+            return attrs
+
+        # ------------------------------------------
+        # Company isolation
+        # ------------------------------------------
+
+        if (
+            request
+            and not request.user.is_superuser
+            and employee.company
+            != request.user.company
+        ):
+            raise serializers.ValidationError(
+                {
+                    "employee":
+                    (
+                        "You can only manage "
+                        "emergency contacts for "
+                        "employees in your own company."
+                    )
+                }
+            )
+
+        # ------------------------------------------
+        # Duplicate phone validation
+        # ------------------------------------------
+
+        queryset = EmergencyContact.objects.filter(
+            employee=employee,
+            phone=phone,
+        )
+
+        if self.instance:
+
+            queryset = queryset.exclude(
+                pk=self.instance.pk,
+            )
+
+        if queryset.exists():
+
+            raise serializers.ValidationError(
+                {
+                    "phone":
+                    (
+                        "This phone number already "
+                        "exists for this employee."
+                    )
+                }
+            )
+
+        # ------------------------------------------
+        # Only one primary contact
+        # ------------------------------------------
+
+        if is_primary:
+
+            queryset = EmergencyContact.objects.filter(
+                employee=employee,
+                is_primary=True,
+            )
+
+            if self.instance:
+
+                queryset = queryset.exclude(
+                    pk=self.instance.pk,
+                )
+
+            if queryset.exists():
+
+                raise serializers.ValidationError(
+                    {
+                        "is_primary":
+                        (
+                            "Only one primary "
+                            "emergency contact "
+                            "is allowed."
+                        )
+                    }
+                )
 
         return attrs

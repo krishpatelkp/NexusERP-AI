@@ -295,6 +295,47 @@ PERMISSIONS = [
         "permission_code": "designation.delete",
         "description": "Delete designations",
     },
+
+    {
+        "permission_name": "Create Employee Address",
+        "permission_code": "employee_address.create",
+        "description": "Create employee addresses",
+    },
+    {
+        "permission_name": "View Employee Address",
+        "permission_code": "employee_address.view",
+        "description": "View employee addresses",
+    },
+    {
+        "permission_name": "Update Employee Address",
+        "permission_code": "employee_address.update",
+        "description": "Update employee addresses",
+    },
+    {
+        "permission_name": "Delete Employee Address",
+        "permission_code": "employee_address.delete",
+        "description": "Delete employee addresses",
+    },
+    {
+        "permission_name": "Create Emergency Contact",
+        "permission_code": "emergency_contact.create",
+        "description": "Create emergency contacts",
+    },
+    {
+        "permission_name": "View Emergency Contact",
+        "permission_code": "emergency_contact.view",
+        "description": "View emergency contacts",
+    },
+    {
+        "permission_name": "Update Emergency Contact",
+        "permission_code": "emergency_contact.update",
+        "description": "Update emergency contacts",
+    },
+    {
+        "permission_name": "Delete Emergency Contact",
+        "permission_code": "emergency_contact.delete",
+        "description": "Delete emergency contacts",
+    },
 ]
 
 

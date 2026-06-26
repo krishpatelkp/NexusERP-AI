@@ -4,6 +4,8 @@ from .models import (
     Department,
     Designation,
     Employee,
+    EmployeeAddress,
+    EmergencyContact,
 )
 
 
@@ -294,6 +296,196 @@ class EmployeeAdmin(admin.ModelAdmin):
         ),
         (
             "Audit Information",
+            {
+                "fields": (
+                    "created_at",
+                    "updated_at",
+                )
+            },
+        ),
+    )
+
+
+# ==========================================================
+# EMPLOYEE ADDRESS ADMIN
+# ==========================================================
+
+@admin.register(EmployeeAddress)
+class EmployeeAddressAdmin(admin.ModelAdmin):
+    """
+    Manage employee addresses.
+    """
+
+    list_display = (
+        "employee",
+        "address_type",
+        "city",
+        "state",
+        "country",
+        "postal_code",
+        "is_active",
+        "created_at",
+    )
+
+    list_select_related = (
+        "employee",
+    )
+
+    search_fields = (
+        "employee__employee_id",
+        "employee__first_name",
+        "employee__last_name",
+        "city",
+        "state",
+        "country",
+        "postal_code",
+        "address_line_1",
+    )
+
+    list_filter = (
+        "address_type",
+        "country",
+        "state",
+        "is_active",
+    )
+
+    ordering = (
+        "employee",
+        "address_type",
+    )
+
+    readonly_fields = (
+        "created_at",
+        "updated_at",
+    )
+
+    fieldsets = (
+        (
+            "Employee",
+            {
+                "fields": (
+                    "employee",
+                    "address_type",
+                )
+            },
+        ),
+        (
+            "Address Details",
+            {
+                "fields": (
+                    "address_line_1",
+                    "address_line_2",
+                    "city",
+                    "state",
+                    "country",
+                    "postal_code",
+                )
+            },
+        ),
+        (
+            "Status",
+            {
+                "fields": (
+                    "is_active",
+                )
+            },
+        ),
+        (
+            "Timestamps",
+            {
+                "fields": (
+                    "created_at",
+                    "updated_at",
+                )
+            },
+        ),
+    )
+
+
+# ==========================================================
+# EMERGENCY CONTACT ADMIN
+# ==========================================================
+
+@admin.register(EmergencyContact)
+class EmergencyContactAdmin(admin.ModelAdmin):
+    """
+    Manage employee emergency contacts.
+    """
+
+    list_display = (
+        "employee",
+        "contact_name",
+        "relationship",
+        "phone",
+        "is_primary",
+        "is_active",
+        "created_at",
+    )
+
+    list_select_related = (
+        "employee",
+    )
+
+    search_fields = (
+        "employee__employee_id",
+        "employee__first_name",
+        "employee__last_name",
+        "contact_name",
+        "phone",
+        "alternate_phone",
+        "email",
+    )
+
+    list_filter = (
+        "relationship",
+        "is_primary",
+        "is_active",
+    )
+
+    ordering = (
+        "employee",
+        "-is_primary",
+        "contact_name",
+    )
+
+    readonly_fields = (
+        "created_at",
+        "updated_at",
+    )
+
+    fieldsets = (
+        (
+            "Employee Information",
+            {
+                "fields": (
+                    "employee",
+                )
+            },
+        ),
+        (
+            "Emergency Contact",
+            {
+                "fields": (
+                    "contact_name",
+                    "relationship",
+                    "phone",
+                    "alternate_phone",
+                    "email",
+                    "address",
+                )
+            },
+        ),
+        (
+            "Status",
+            {
+                "fields": (
+                    "is_primary",
+                    "is_active",
+                )
+            },
+        ),
+        (
+            "Timestamps",
             {
                 "fields": (
                     "created_at",

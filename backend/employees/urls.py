@@ -7,6 +7,10 @@ from .views import (
     DesignationRetrieveUpdateDestroyAPIView,
     EmployeeListCreateAPIView,
     EmployeeRetrieveUpdateDestroyAPIView,
+    EmployeeAddressListCreateAPIView,
+    EmployeeAddressRetrieveUpdateDestroyAPIView,
+    EmergencyContactListCreateAPIView,
+    EmergencyContactRetrieveUpdateDestroyAPIView,
 )
 
 
@@ -63,4 +67,38 @@ urlpatterns = [
         name="employee-detail",
     ),
 
+
+# ==========================================================
+# EMPLOYEE ADDRESS URLS
+# ==========================================================
+
+    path(
+        "employee-addresses/",
+        EmployeeAddressListCreateAPIView.as_view(),
+        name="employee-address-list-create",
+    ),
+
+    path(
+        "employee-addresses/<int:pk>/",
+        EmployeeAddressRetrieveUpdateDestroyAPIView.as_view(),
+        name="employee-address-detail",
+    ),
+# ==========================================================
+# EMERGENCY CONTACT URLS
+# ==========================================================
+
+    path(
+        "emergency-contacts/",
+        EmergencyContactListCreateAPIView.as_view(),
+        name="emergency-contact-list-create",
+    ),
+
+    path(
+        "emergency-contacts/<int:pk>/",
+        EmergencyContactRetrieveUpdateDestroyAPIView.as_view(),
+        name="emergency-contact-detail",
+    ),
+
 ]
+
+

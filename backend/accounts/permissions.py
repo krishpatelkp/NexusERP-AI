@@ -335,3 +335,83 @@ class HasDesignationUpdatePermission(HasPermission):
 
 class HasDesignationDeletePermission(HasPermission):
     permission_code = "designation.delete"
+
+
+# ==========================================================
+# EMPLOYEE ADDRESS PERMISSIONS
+# ==========================================================
+
+class HasEmployeeAddressCreatePermission(
+    HasPermission,
+):
+    """
+    Allows creating employee addresses.
+    """
+    permission_code = (
+        "employee_address.create"
+    )
+
+
+class HasEmployeeAddressViewPermission(
+    HasPermission,
+):
+    """
+    Allows viewing employee addresses.
+    """
+    permission_code = (
+        "employee_address.view"
+    )
+
+
+class HasEmployeeAddressUpdatePermission(
+    HasPermission,
+):
+    """
+    Allows updating employee addresses.
+    """
+    permission_code = (
+        "employee_address.update"
+    )
+
+
+class HasEmployeeAddressDeletePermission(
+    HasPermission,
+):
+    """
+    Allows deleting employee addresses.
+    """
+    permission_code = (
+        "employee_address.delete"
+    )
+
+
+# ==========================================================
+# EMERGENCY CONTACT PERMISSIONS
+# ==========================================================
+
+class HasEmergencyContactCreatePermission(
+    HasPermission,
+):
+    """Allows creating emergency contacts."""
+    permission_code = "emergency_contact.create"
+
+
+class HasEmergencyContactViewPermission(
+    HasPermission,
+):
+    """Allows viewing emergency contacts."""
+    permission_code = "emergency_contact.view"
+
+
+class HasEmergencyContactUpdatePermission(
+    HasPermission,
+):
+    """Allows updating emergency contacts."""
+    permission_code = "emergency_contact.update"
+
+
+class HasEmergencyContactDeletePermission(
+    HasPermission,
+):
+    """Allows deleting emergency contacts."""
+    permission_code = "emergency_contact.delete"

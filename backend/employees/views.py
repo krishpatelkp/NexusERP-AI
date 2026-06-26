@@ -14,18 +14,30 @@ from accounts.permissions import (
     HasEmployeeViewPermission,
     HasEmployeeUpdatePermission,
     HasEmployeeDeletePermission,
+    HasEmployeeAddressCreatePermission,
+    HasEmployeeAddressViewPermission,
+    HasEmployeeAddressUpdatePermission,
+    HasEmployeeAddressDeletePermission,
+    HasEmergencyContactCreatePermission,
+    HasEmergencyContactViewPermission,
+    HasEmergencyContactUpdatePermission,
+    HasEmergencyContactDeletePermission,
 )
 
 from .models import (
     Department,
     Designation,
     Employee,
+    EmployeeAddress,
+    EmergencyContact,   
 )
 
 from .serializers import (
     DepartmentSerializer,
     DesignationSerializer,
     EmployeeSerializer,
+    EmployeeAddressSerializer,
+    EmergencyContactSerializer, 
 )
 
 
@@ -492,6 +504,322 @@ class EmployeeRetrieveUpdateDestroyAPIView(
             update_fields=[
                 "is_active",
                 "employee_status",
+                "updated_at",
+            ]
+        )
+        
+
+# ==========================================================
+# EMPLOYEE ADDRESS LIST & CREATE
+# ==========================================================
+
+class EmployeeAddressListCreateAPIView(
+    generics.ListCreateAPIView,
+):
+    """
+    GET:
+        Return all active employee addresses.
+
+    POST:
+        Create a new employee address.
+    """
+
+    serializer_class = (
+        EmployeeAddressSerializer
+    )
+
+    def get_queryset(self):
+
+        queryset = (
+            EmployeeAddress.objects
+            .select_related(
+                "employee",
+                "employee__company",
+            )
+            .filter(
+                is_active=True,
+            )
+            .order_by(
+                "employee",
+                "address_type",
+            )
+        )
+
+        if self.request.user.is_superuser:
+            return queryset
+
+        return queryset.filter(
+            employee__company=
+            self.request.user.company
+        )
+
+    def get_permissions(self):
+
+        if self.request.method == "POST":
+
+            permission_classes = (
+                IsAuthenticated,
+                HasEmployeeAddressCreatePermission,
+            )
+
+        else:
+
+            permission_classes = (
+                IsAuthenticated,
+                HasEmployeeAddressViewPermission,
+            )
+
+        return [
+            permission()
+            for permission
+            in permission_classes
+        ]
+
+
+# ==========================================================
+# EMPLOYEE ADDRESS DETAIL
+# ==========================================================
+
+class EmployeeAddressRetrieveUpdateDestroyAPIView(
+    generics.RetrieveUpdateDestroyAPIView,
+):
+    """
+    Retrieve, update and
+    soft delete employee addresses.
+    """
+
+    serializer_class = (
+        EmployeeAddressSerializer
+    )
+
+    def get_queryset(self):
+
+        queryset = (
+            EmployeeAddress.objects
+            .select_related(
+                "employee",
+                "employee__company",
+            )
+            .filter(
+                is_active=True,
+            )
+            .order_by(
+                "employee",
+                "address_type",
+            )
+        )
+
+        if self.request.user.is_superuser:
+            return queryset
+
+        return queryset.filter(
+            employee__company=
+            self.request.user.company
+        )
+
+    def get_permissions(self):
+
+        if self.request.method == "GET":
+
+            permission_classes = (
+                IsAuthenticated,
+                HasEmployeeAddressViewPermission,
+            )
+
+        elif self.request.method in (
+            "PUT",
+            "PATCH",
+        ):
+
+            permission_classes = (
+                IsAuthenticated,
+                HasEmployeeAddressUpdatePermission,
+            )
+
+        else:
+
+            permission_classes = (
+                IsAuthenticated,
+                HasEmployeeAddressDeletePermission,
+            )
+
+        return [
+            permission()
+            for permission
+            in permission_classes
+        ]
+
+    def perform_destroy(
+        self,
+        instance,
+    ):
+        """
+        Soft delete.
+        """
+
+        instance.is_active = False
+
+        instance.save(
+            update_fields=[
+                "is_active",
+                "updated_at",
+            ]
+        )
+
+
+# ==========================================================
+# EMERGENCY CONTACT LIST & CREATE
+# ==========================================================
+
+class EmergencyContactListCreateAPIView(
+    generics.ListCreateAPIView
+):
+    """
+    GET:
+        Return all active emergency contacts.
+
+    POST:
+        Create a new emergency contact.
+    """
+
+    serializer_class = (
+        EmergencyContactSerializer
+    )
+
+    def get_queryset(self):
+
+        queryset = (
+            EmergencyContact.objects
+            .select_related(
+                "employee",
+                "employee__company",
+            )
+            .filter(
+                is_active=True,
+            )
+            .order_by(
+                "employee",
+                "-is_primary",
+                "contact_name",
+            )
+        )
+
+        if self.request.user.is_superuser:
+            return queryset
+
+        return queryset.filter(
+            employee__company=
+            self.request.user.company
+        )
+
+    def get_permissions(self):
+
+        if self.request.method == "POST":
+
+            permission_classes = (
+                IsAuthenticated,
+                HasEmergencyContactCreatePermission,
+            )
+
+        else:
+
+            permission_classes = (
+                IsAuthenticated,
+                HasEmergencyContactViewPermission,
+            )
+
+        return [
+            permission()
+            for permission in permission_classes
+        ]
+
+
+# ==========================================================
+# EMERGENCY CONTACT DETAIL
+# ==========================================================
+
+class EmergencyContactRetrieveUpdateDestroyAPIView(
+    generics.RetrieveUpdateDestroyAPIView
+):
+    """
+    Retrieve, update and
+    soft delete emergency contacts.
+    """
+
+    serializer_class = (
+        EmergencyContactSerializer
+    )
+
+    def get_queryset(self):
+
+        queryset = (
+            EmergencyContact.objects
+            .select_related(
+                "employee",
+                "employee__company",
+            )
+            .filter(
+                is_active=True,
+            )
+            .order_by(
+                "employee",
+                "-is_primary",
+                "contact_name",
+            )
+        )
+
+        if self.request.user.is_superuser:
+            return queryset
+
+        return queryset.filter(
+            employee__company=
+            self.request.user.company
+        )
+
+    def get_permissions(self):
+
+        if self.request.method == "GET":
+
+            permission_classes = (
+                IsAuthenticated,
+                HasEmergencyContactViewPermission,
+            )
+
+        elif self.request.method in (
+            "PUT",
+            "PATCH",
+        ):
+
+            permission_classes = (
+                IsAuthenticated,
+                HasEmergencyContactUpdatePermission,
+            )
+
+        else:
+
+            permission_classes = (
+                IsAuthenticated,
+                HasEmergencyContactDeletePermission,
+            )
+
+        return [
+            permission()
+            for permission in permission_classes
+        ]
+
+    def perform_destroy(
+        self,
+        instance,
+    ):
+        """
+        Soft delete the emergency contact.
+        """
+
+        instance.is_active = False
+
+        instance.save(
+            update_fields=[
+                "is_active",
                 "updated_at",
             ]
         )
