@@ -2051,6 +2051,16 @@ class EmployeeShiftAssignment(models.Model):
 
         ]
 
+        constraints = [
+
+        models.UniqueConstraint(
+            fields=["employee"],
+            condition=models.Q(is_active=True),
+            name="unique_active_shift_per_employee",
+        ),
+
+    ]
+
     def clean(self):
 
         super().clean()

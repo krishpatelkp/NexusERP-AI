@@ -62,5 +62,11 @@ urlpatterns = [
         "api/attendance/",
         include("attendance.urls"),
     ),
+    path(
+        "api/leave/",
+        include(
+            "leave_management.urls",
+        ),
+    ),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

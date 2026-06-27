@@ -153,7 +153,7 @@ class CheckInAPIView(
         return Response(
             {
                 "message": "Check-in successful.",
-                "attendance_id": AttendanceSerializer(attendance).data,
+                "attendance": AttendanceSerializer(attendance).data,
             },
             status=status.HTTP_200_OK,
         )

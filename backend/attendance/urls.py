@@ -7,6 +7,15 @@ from .views import (
     CheckOutAPIView,
 )
 
+from .report_views import (
+    DailyAttendanceReportAPIView,
+    EmployeeAttendanceHistoryAPIView,
+    MonthlyAttendanceSummaryAPIView,
+    AttendanceDashboardAPIView,
+    AttendanceExceptionAPIView,
+)
+
+
 urlpatterns = [
 
     # ==========================
@@ -39,6 +48,40 @@ urlpatterns = [
         "check-out/",
         CheckOutAPIView.as_view(),
         name="check-out",
+    ),
+
+    # ==========================
+    # Reports
+    # ==========================
+
+    path(
+        "reports/daily/",
+        DailyAttendanceReportAPIView.as_view(),
+        name="report-daily",
+    ),
+
+    path(
+        "reports/employee/",
+        EmployeeAttendanceHistoryAPIView.as_view(),
+        name="report-employee-history",
+    ),
+
+    path(
+        "reports/monthly/",
+        MonthlyAttendanceSummaryAPIView.as_view(),
+        name="report-monthly",
+    ),
+
+    path(
+        "reports/dashboard/",
+        AttendanceDashboardAPIView.as_view(),
+        name="report-dashboard",
+    ),
+
+    path(
+        "reports/exceptions/",
+        AttendanceExceptionAPIView.as_view(),
+        name="report-exceptions",
     ),
 
 ]
