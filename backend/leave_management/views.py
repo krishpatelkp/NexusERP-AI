@@ -82,14 +82,6 @@ class LeaveRequestCreateAPIView(
             raise_exception=True,
         )
 
-        print("=" * 80)
-        print("REQUEST USER:", request.user)
-        print("ID:", request.user.id)
-        print("EMAIL:", request.user.email)
-        print("USERNAME:", request.user.username)
-        print("AUTH:", request.user.is_authenticated)
-        print("=" * 80)
-
         employee = request.user.employee_profile
 
         print("EMPLOYEE:", employee)

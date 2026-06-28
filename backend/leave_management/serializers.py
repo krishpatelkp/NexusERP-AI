@@ -56,6 +56,7 @@ class LeaveTypeSerializer(
             "id",
             "created_at",
             "updated_at",
+            "company"
         )
 
 
