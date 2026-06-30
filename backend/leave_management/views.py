@@ -84,8 +84,6 @@ class LeaveRequestCreateAPIView(
 
         employee = request.user.employee_profile
 
-        print("EMPLOYEE:", employee)
-
         service = LeaveService(
             employee=employee,
         )
