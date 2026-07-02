@@ -84,5 +84,9 @@ urlpatterns = [
         "api/reports/",
         include("reports.urls"),
     ),
+    path(
+        "api/data-exchange/",
+        include("data_exchange.urls"),
+    ),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

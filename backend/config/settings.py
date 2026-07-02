@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'company',
     'common',
     'core',
+    'data_exchange',
     'rest_framework_simplejwt',
 ]
 
