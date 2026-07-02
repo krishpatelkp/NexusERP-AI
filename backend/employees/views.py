@@ -98,7 +98,7 @@ class EmployeeQuerysetMixin:
             return queryset
 
         return queryset.filter(
-            company=self.request.user.company
+            company=self.request.user.employee_profile.company
         )
 
 
@@ -137,7 +137,7 @@ class DepartmentListCreateAPIView(
             return queryset
 
         return queryset.filter(
-            company=self.request.user.company
+            company=self.request.user.employee_profile.company
         )
 
     def get_permissions(self):
@@ -173,7 +173,7 @@ class DepartmentListCreateAPIView(
             serializer.save()
         else:
             serializer.save(
-            company=self.request.user.company
+            company=self.request.user.employee_profile.company
         )
 
 
@@ -216,7 +216,7 @@ class DepartmentRetrieveUpdateDestroyAPIView(
             return queryset
 
         return queryset.filter(
-            company=self.request.user.company
+            company=self.request.user.employee_profile.company
         )
 
     def get_permissions(self):
@@ -293,7 +293,7 @@ class DesignationListCreateAPIView(
             return queryset
 
         return queryset.filter(
-            company=self.request.user.company
+            company=self.request.user.employee_profile.company
         )
 
     def get_permissions(self):
@@ -326,7 +326,7 @@ class DesignationListCreateAPIView(
             serializer.save()
         else:
             serializer.save(
-            company=self.request.user.company
+            company=self.request.user.employee_profile.company
         )
 
 
@@ -356,7 +356,7 @@ class DesignationRetrieveUpdateDestroyAPIView(
             return queryset
 
         return queryset.filter(
-            company=self.request.user.company
+            company=self.request.user.employee_profile.company
         )
 
     def get_permissions(self):
@@ -453,7 +453,7 @@ class EmployeeListCreateAPIView(
             serializer.save()
         else:
             serializer.save(
-                company=self.request.user.company
+                company=self.request.user.employee_profile.company
             )
 
 
@@ -572,7 +572,7 @@ class EmployeeAddressListCreateAPIView(
 
         return queryset.filter(
             employee__company=
-            self.request.user.company
+            self.request.user.employee_profile.company
         )
 
     def get_permissions(self):
@@ -636,7 +636,7 @@ class EmployeeAddressRetrieveUpdateDestroyAPIView(
 
         return queryset.filter(
             employee__company=
-            self.request.user.company
+            self.request.user.employee_profile.company
         )
 
     def get_permissions(self):
@@ -731,7 +731,7 @@ class EmergencyContactListCreateAPIView(
 
         return queryset.filter(
             employee__company=
-            self.request.user.company
+            self.request.user.employee_profile.company
         )
 
     def get_permissions(self):
@@ -795,7 +795,7 @@ class EmergencyContactRetrieveUpdateDestroyAPIView(
 
         return queryset.filter(
             employee__company=
-            self.request.user.company
+            self.request.user.employee_profile.company
         )
 
     def get_permissions(self):
@@ -889,7 +889,7 @@ class EmployeeBankDetailListCreateAPIView(
 
         return queryset.filter(
             employee__company=
-            self.request.user.company
+            self.request.user.employee_profile.company
         )
 
     def get_permissions(self):
@@ -953,7 +953,7 @@ class EmployeeBankDetailRetrieveUpdateDestroyAPIView(
 
         return queryset.filter(
             employee__company=
-            self.request.user.company
+            self.request.user.employee_profile.company
         )
 
     def get_permissions(self):
@@ -1051,7 +1051,7 @@ class EmployeeDocumentListCreateAPIView(
 
         return queryset.filter(
             employee__company=
-            self.request.user.company
+            self.request.user.employee_profile.company
         )
 
     def get_permissions(self):
@@ -1120,7 +1120,7 @@ class EmployeeDocumentRetrieveUpdateDestroyAPIView(
 
         return queryset.filter(
             employee__company=
-            self.request.user.company
+            self.request.user.employee_profile.company
         )
 
     def get_permissions(self):
@@ -1202,7 +1202,7 @@ class ShiftListCreateAPIView(
             return queryset
 
         return queryset.filter(
-            company=self.request.user.company
+            company=self.request.user.employee_profile.company
         )
 
     def get_permissions(self):
@@ -1231,7 +1231,7 @@ class ShiftListCreateAPIView(
         serializer,
     ):
         serializer.save(
-            company=self.request.user.company
+            company=self.request.user.employee_profile.company
         )
 
 
@@ -1261,7 +1261,7 @@ class ShiftRetrieveUpdateDestroyAPIView(
             return queryset
 
         return queryset.filter(
-            company=self.request.user.company
+            company=self.request.user.employee_profile.company
         )
 
     def get_permissions(self):

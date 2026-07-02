@@ -24,8 +24,8 @@ class PaymentSerializer(serializers.ModelSerializer):
         read_only=True,
     )
 
-    payslip_number = serializers.CharField(
-        source="payslip.payslip_number",
+    payslip_id = serializers.CharField(
+        source="payslip.id",
         read_only=True,
     )
 
@@ -40,7 +40,7 @@ class PaymentSerializer(serializers.ModelSerializer):
             "company",
             "company_name",
             "payslip",
-            "payslip_number",
+            "payslip_id",
             "employee",
             "employee_code",
             "employee_name",
@@ -65,7 +65,7 @@ class PaymentSerializer(serializers.ModelSerializer):
             "company_name",
             "employee_name",
             "employee_code",
-            "payslip_number",
+            "payslip_id",
             "payment_number",
             "processed_by_name",
             "processed_at",

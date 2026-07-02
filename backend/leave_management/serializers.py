@@ -307,57 +307,6 @@ class LeaveRequestDetailSerializer(
 
         read_only_fields = fields
 
-
-# ==========================================================
-# LEAVE APPROVAL SERIALIZER
-# ==========================================================
-
-class LeaveApprovalSerializer(
-    serializers.Serializer,
-):
-    """
-    Serializer for approving a leave request.
-    """
-
-    approval_reason = serializers.CharField(
-        required=False,
-        allow_blank=True,
-        default="",
-    )
-
-
-# ==========================================================
-# LEAVE REJECT SERIALIZER
-# ==========================================================
-
-class LeaveRejectSerializer(
-    serializers.Serializer,
-):
-    """
-    Serializer for rejecting a leave request.
-    """
-
-    approval_reason = serializers.CharField()
-
-
-# ==========================================================
-# LEAVE CANCEL SERIALIZER
-# ==========================================================
-
-class LeaveCancelSerializer(
-    serializers.Serializer,
-):
-    """
-    Serializer for cancelling a leave request.
-    """
-
-    remarks = serializers.CharField(
-        required=False,
-        allow_blank=True,
-        default="",
-    )
-
-
 # ==========================================================
 # APPROVE LEAVE SERIALIZER
 # ==========================================================

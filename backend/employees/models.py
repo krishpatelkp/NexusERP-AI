@@ -1742,13 +1742,6 @@ class EmployeeDocument(models.Model):
         )
     
 
-from django.db import models
-from django.core.exceptions import ValidationError
-
-from company.models import Company
-
-# Create your models here.
-
 # ==========================================================
 # SHIFT MODEL
 # ==========================================================

@@ -61,12 +61,9 @@ class Role(models.Model):
         ]
 
     def save(self, *args, **kwargs):
-         if self.role_code:
-            self.role_code = (
-                self.role_code.strip().upper()
-            )
-    
-            super().save(*args, **kwargs)
+        if self.role_code:
+            self.role_code = self.role_code.strip().upper()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.company.company_name} - {self.role_name}"
@@ -109,10 +106,8 @@ class Permission(models.Model):
 
     def save(self, *args, **kwargs):
         if self.permission_code:
-            self.permission_code = (
-                self.permission_code.strip().lower()
-            )
-            super().save(*args, **kwargs)
+            self.permission_code = self.permission_code.strip().lower()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.permission_name} ({self.permission_code})"

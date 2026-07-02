@@ -107,10 +107,23 @@ class PaymentService:
 
         year = timezone.now().year
 
-        payment_number = (
-            f"PAY-{year}-"
-            f"{Payment.objects.count() + 1:06d}"
+        last = (
+        Payment.objects
+        .filter(company=self.company)
+        .order_by("-id")
+        .values_list("payment_number", flat=True)
+        .first()
         )
+
+        if last:
+            try:
+                last_number = int(last.split("-")[-1])
+            except (ValueError, IndexError):
+                last_number = 0
+        else:
+            last_number = 0
+
+        payment_number = f"PAY-{year}-{last_number + 1:06d}"
 
         # ------------------------------------------
         # Create Payment

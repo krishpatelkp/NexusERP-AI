@@ -11,6 +11,7 @@ from .serializers import (
     HolidaySerializer,
     CheckInSerializer,
     CheckOutSerializer,
+    AttendanceSerializer,
 )
 
 from .services import (
@@ -52,7 +53,7 @@ class HolidayListCreateAPIView(
         return Holiday.objects.select_related(
             "company",
         ).filter(
-            company=user.company,
+            company=user.employee_profile.company,
             is_active=True,
         )
     
@@ -89,7 +90,7 @@ class HolidayRetrieveUpdateDestroyAPIView(
         return Holiday.objects.select_related(
             "company",
         ).filter(
-            company=user.company,
+            company=user.employee_profile.company,
         )
 
     def perform_destroy(

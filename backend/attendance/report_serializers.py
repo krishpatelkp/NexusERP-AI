@@ -230,7 +230,7 @@ class AttendanceDashboardSerializer(
 
     half_day_count = serializers.IntegerField()
 
-    not_marked_count = serializers.IntegerField()
+    not_marked = serializers.IntegerField()
 
     attendance_percentage = serializers.FloatField()
 

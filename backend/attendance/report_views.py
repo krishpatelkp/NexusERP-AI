@@ -113,7 +113,7 @@ class BaseAttendanceReportAPIView(
         every report inherits it automatically.
         """
         return AttendanceReportService(
-            company=self.request.user.company,
+            company=self.request.user.employee_profile.company,
         )
 
 

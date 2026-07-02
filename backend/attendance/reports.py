@@ -73,6 +73,147 @@ class AttendanceReportService:
         Records with anomalies flagged for HR review.
     """
 
+    # def department_summary(
+    #     self,
+    #     month,
+    #     year,
+    # ):
+    #     """
+    #     Department-wise attendance summary.
+    #     """
+
+    #     queryset = (
+    #         self._base_queryset()
+    #         .filter(
+    #             date__year=year,
+    #             date__month=month,
+    #         )
+    #     )
+
+    #     return (
+    #         queryset
+    #         .values(
+    #             "employee__department__department_name",
+    #         )
+    #         .annotate(
+    #             present=Count(
+    #                 "id",
+    #                 filter=Q(status=AttendanceStatus.PRESENT),
+    #             ),
+    #             absent=Count(
+    #                 "id",
+    #                 filter=Q(status=AttendanceStatus.ABSENT),
+    #             ),
+    #             half_day=Count(
+    #                 "id",
+    #                 filter=Q(status=AttendanceStatus.HALF_DAY),
+    #             ),
+    #             leave=Count(
+    #                 "id",
+    #                 filter=Q(status=AttendanceStatus.LEAVE),
+    #             ),
+    #             late=Count(
+    #                 "id",
+    #                 filter=Q(late_minutes__gt=0),
+    #             ),
+    #         )
+    #         .order_by(
+    #             "employee__department__department_name",
+    #         )
+    #     )
+    
+
+
+    # def attendance_trend(
+    #     self,
+    #     date_from,
+    #     date_to,
+    # ):
+    #     """
+    #     Daily attendance trend.
+    #     """
+
+    #     return (
+    #         self._base_queryset()
+    #         .filter(
+    #             date__gte=date_from,
+    #             date__lte=date_to,
+    #         )
+    #         .values("date")
+    #         .annotate(
+    #             present=Count(
+    #                 "id",
+    #                 filter=Q(status=AttendanceStatus.PRESENT),
+    #             ),
+    #             absent=Count(
+    #                 "id",
+    #                 filter=Q(status=AttendanceStatus.ABSENT),
+    #             ),
+    #             half_day=Count(
+    #                 "id",
+    #                 filter=Q(status=AttendanceStatus.HALF_DAY),
+    #             ),
+    #             leave=Count(
+    #                 "id",
+    #                 filter=Q(status=AttendanceStatus.LEAVE),
+    #             ),
+    #         )
+    #         .order_by("date")
+    #     )
+    
+
+    # def top_absentees(
+    #     self,
+    #     limit=10,
+    # ):
+    #     """
+    #     Employees with the highest absences.
+    #     """
+
+    #     return (
+    #         self._base_queryset()
+    #         .values(
+    #             "employee__employee_id",
+    #             "employee__first_name",
+    #             "employee__middle_name",
+    #             "employee__last_name",
+    #         )
+    #         .annotate(
+    #             absent_days=Count(
+    #                 "id",
+    #                 filter=Q(status=AttendanceStatus.ABSENT),
+    #             ),
+    #         )
+    #         .order_by("-absent_days")[:limit]
+    #     )
+    
+
+
+    # def best_attendance(
+    #     self,
+    #     limit=10,
+    # ):
+    #     """
+    #     Employees with the highest attendance.
+    #     """
+
+    #     return (
+    #         self._base_queryset()
+    #         .values(
+    #             "employee__employee_id",
+    #             "employee__first_name",
+    #             "employee__middle_name",
+    #             "employee__last_name",
+    #         )
+    #         .annotate(
+    #             present_days=Count(
+    #                 "id",
+    #                 filter=Q(status=AttendanceStatus.PRESENT),
+    #             ),
+    #         )
+    #         .order_by("-present_days")[:limit]
+    #     )
+
     def __init__(self, company):
         """
         Every report is scoped to one company.
@@ -181,9 +322,6 @@ class AttendanceReportService:
             date_from = today - relativedelta(
             months=DEFAULT_HISTORY_MONTHS,
 )
-            year = today.year + month // 12
-            month = month % 12 or 12
-            date_from = today.replace(year=year, month=month, day=1)
 
         return (
             self._base_queryset()
