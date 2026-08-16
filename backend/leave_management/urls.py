@@ -7,10 +7,28 @@ from .views import (
     ApproveLeaveAPIView,
     RejectLeaveAPIView,
     CancelLeaveAPIView,
+    LeaveTypeListAPIView,
+    LeaveBalanceListAPIView,
 )
 
 
 urlpatterns = [
+
+    # ======================================================
+    # LEAVE TYPES & BALANCES
+    # ======================================================
+
+    path(
+        "types/",
+        LeaveTypeListAPIView.as_view(),
+        name="leave_type_list",
+    ),
+
+    path(
+        "balances/",
+        LeaveBalanceListAPIView.as_view(),
+        name="leave_balance_list",
+    ),
 
     # ======================================================
     # LEAVE REQUESTS

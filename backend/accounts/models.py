@@ -252,7 +252,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         if not self.is_active:
             return False
 
-        if self.is_superuser:
+        if self.is_superuser or self.is_staff or (self.role and "ADMIN" in self.role.role_name.upper()):
             return True
 
         if self.role is None:

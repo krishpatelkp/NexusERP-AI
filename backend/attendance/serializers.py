@@ -406,7 +406,9 @@ class CheckInSerializer(serializers.Serializer):
     employee = serializers.PrimaryKeyRelatedField(
         queryset=Employee.objects.filter(
             is_active=True,
-        )
+        ),
+        required=False,
+        allow_null=True,
     )
 
     check_in = serializers.DateTimeField()
@@ -438,6 +440,8 @@ class CheckOutSerializer(serializers.Serializer):
         queryset=Employee.objects.filter(
             is_active=True,
         ),
+        required=False,
+        allow_null=True,
     )
 
     check_out = serializers.DateTimeField()

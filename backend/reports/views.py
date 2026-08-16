@@ -528,7 +528,7 @@ class MonthlyAttendanceAPIView(
     BaseReportAPIView,
 ):
 
-    service_class = AttendanceReportService
+    service_class = DetailedAttendanceReportService
 
     def get(
         self,
@@ -541,7 +541,7 @@ class MonthlyAttendanceAPIView(
 
         service = self.get_service()
 
-        data = service.employee_attendance_summary(
+        data = service.monthly_summary(
             month=month,
             year=year,
         )

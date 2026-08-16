@@ -1,3 +1,13 @@
+def get_user_company(user):
+    if not user or not user.is_authenticated:
+        return None
+    if getattr(user, 'company', None):
+        return user.company
+    emp_profile = getattr(user, 'employee_profile', None)
+    if emp_profile and getattr(emp_profile, 'company', None):
+        return emp_profile.company
+    return None
+
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import (
@@ -98,7 +108,7 @@ class EmployeeQuerysetMixin:
             return queryset
 
         return queryset.filter(
-            company=self.request.user.employee_profile.company
+            company=get_user_company(self.request.user)
         )
 
 
@@ -137,7 +147,7 @@ class DepartmentListCreateAPIView(
             return queryset
 
         return queryset.filter(
-            company=self.request.user.employee_profile.company
+            company=get_user_company(self.request.user)
         )
 
     def get_permissions(self):
@@ -169,12 +179,10 @@ class DepartmentListCreateAPIView(
         the client to send it.
         """
 
-        if self.request.user.is_superuser:
-            serializer.save()
-        else:
-            serializer.save(
-            company=self.request.user.employee_profile.company
-        )
+        company = getattr(self.request.user, "company", None)
+        if company is None and hasattr(self.request.user, "employee_profile"):
+            company = self.request.user.employee_profile.company
+        serializer.save(company=company)
 
 
 # ==========================================================
@@ -216,7 +224,7 @@ class DepartmentRetrieveUpdateDestroyAPIView(
             return queryset
 
         return queryset.filter(
-            company=self.request.user.employee_profile.company
+            company=get_user_company(self.request.user)
         )
 
     def get_permissions(self):
@@ -293,7 +301,7 @@ class DesignationListCreateAPIView(
             return queryset
 
         return queryset.filter(
-            company=self.request.user.employee_profile.company
+            company=get_user_company(self.request.user)
         )
 
     def get_permissions(self):
@@ -322,12 +330,10 @@ class DesignationListCreateAPIView(
         the client to send it.
         """
 
-        if self.request.user.is_superuser:
-            serializer.save()
-        else:
-            serializer.save(
-            company=self.request.user.employee_profile.company
-        )
+        company = getattr(self.request.user, "company", None)
+        if company is None and hasattr(self.request.user, "employee_profile"):
+            company = self.request.user.employee_profile.company
+        serializer.save(company=company)
 
 
 # ==========================================================
@@ -356,7 +362,7 @@ class DesignationRetrieveUpdateDestroyAPIView(
             return queryset
 
         return queryset.filter(
-            company=self.request.user.employee_profile.company
+            company=get_user_company(self.request.user)
         )
 
     def get_permissions(self):
@@ -453,7 +459,7 @@ class EmployeeListCreateAPIView(
             serializer.save()
         else:
             serializer.save(
-                company=self.request.user.employee_profile.company
+                company=get_user_company(self.request.user)
             )
 
 
@@ -1202,7 +1208,7 @@ class ShiftListCreateAPIView(
             return queryset
 
         return queryset.filter(
-            company=self.request.user.employee_profile.company
+            company=get_user_company(self.request.user)
         )
 
     def get_permissions(self):
@@ -1230,9 +1236,10 @@ class ShiftListCreateAPIView(
         self,
         serializer,
     ):
-        serializer.save(
-            company=self.request.user.employee_profile.company
-        )
+        company = getattr(self.request.user, "company", None)
+        if company is None and hasattr(self.request.user, "employee_profile"):
+            company = self.request.user.employee_profile.company
+        serializer.save(company=company)
 
 
 # ==========================================================
@@ -1261,7 +1268,7 @@ class ShiftRetrieveUpdateDestroyAPIView(
             return queryset
 
         return queryset.filter(
-            company=self.request.user.employee_profile.company
+            company=get_user_company(self.request.user)
         )
 
     def get_permissions(self):

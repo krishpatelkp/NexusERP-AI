@@ -402,6 +402,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
         read_only_fields = (
             "id",
             "employee_id",
+            "company",
             "full_name",
             "company_name",
             "department_name",

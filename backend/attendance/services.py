@@ -66,7 +66,10 @@ class AttendanceCalculationService:
     def get_active_shift(self):
         """
         Returns the employee's active shift assignment.
+        Falls back to company active shift or default General Shift if none explicitly assigned.
         """
+        from employees.models import Shift
+        from datetime import time
 
         assignment = (
             EmployeeShiftAssignment.objects
@@ -78,12 +81,42 @@ class AttendanceCalculationService:
             .first()
         )
 
-        if assignment is None:
-            raise ValidationError(
-                "Employee has no active shift assigned."
-            )
+        if assignment:
+            return assignment.shift
 
-        return assignment.shift
+        company_shift = Shift.objects.filter(
+            company=self.employee.company,
+            is_active=True,
+        ).first()
+
+        eff_date = self.employee.joining_date or timezone.localdate()
+
+        if company_shift:
+            EmployeeShiftAssignment.objects.create(
+                employee=self.employee,
+                shift=company_shift,
+                effective_from=eff_date,
+                is_active=True,
+            )
+            return company_shift
+
+        default_shift, _ = Shift.objects.get_or_create(
+            company=self.employee.company,
+            shift_name="General Shift",
+            defaults={
+                "shift_code": "GEN",
+                "start_time": time(9, 0),
+                "end_time": time(18, 0),
+                "is_active": True,
+            }
+        )
+        EmployeeShiftAssignment.objects.create(
+            employee=self.employee,
+            shift=default_shift,
+            effective_from=eff_date,
+            is_active=True,
+        )
+        return default_shift
 
     # ======================================================
     # HOLIDAY CHECK

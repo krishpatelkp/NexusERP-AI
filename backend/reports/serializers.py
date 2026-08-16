@@ -199,14 +199,14 @@ class MonthlyAttendanceSummarySerializer(
     employee_name          = serializers.SerializerMethodField()
     department             = serializers.SerializerMethodField()
     designation            = serializers.SerializerMethodField()
-    present_count          = serializers.IntegerField()
-    absent_count           = serializers.IntegerField()
-    half_day_count         = serializers.IntegerField()
-    leave_count            = serializers.IntegerField()
-    late_count             = serializers.IntegerField()
-    total_working_minutes  = serializers.IntegerField()
-    total_overtime_minutes = serializers.IntegerField()
-    total_late_minutes     = serializers.IntegerField()
+    present_days           = serializers.IntegerField(default=0, required=False)
+    absent_days            = serializers.IntegerField(default=0, required=False)
+    half_days              = serializers.IntegerField(default=0, required=False)
+    leave_days             = serializers.IntegerField(default=0, required=False)
+    late_days              = serializers.IntegerField(default=0, required=False)
+    total_working_minutes  = serializers.IntegerField(default=0, required=False)
+    total_overtime_minutes = serializers.IntegerField(default=0, required=False)
+    total_late_minutes     = serializers.IntegerField(default=0, required=False)
 
     def get_employee_name(self, obj):
         # attendance/reports.py monthly_summary returns dicts

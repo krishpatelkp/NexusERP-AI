@@ -142,13 +142,25 @@ class CheckInAPIView(
             raise_exception=True,
         )
 
+        employee = (
+            serializer.validated_data.get("employee")
+            or getattr(request.user, "employee_profile", None)
+            or Employee.objects.filter(is_active=True).first()
+        )
+
+        if not employee:
+            return Response(
+                {"error": "No active employee profile found to record attendance."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         service = AttendanceCalculationService(
-            employee=serializer.validated_data["employee"],
+            employee=employee,
         )
 
         attendance = service.process_check_in(
             check_in=serializer.validated_data["check_in"],
-            remarks=serializer.validated_data["remarks"],
+            remarks=serializer.validated_data.get("remarks", ""),
         )
 
         return Response(
@@ -191,13 +203,25 @@ class CheckOutAPIView(
             raise_exception=True,
         )
 
+        employee = (
+            serializer.validated_data.get("employee")
+            or getattr(request.user, "employee_profile", None)
+            or Employee.objects.filter(is_active=True).first()
+        )
+
+        if not employee:
+            return Response(
+                {"error": "No active employee profile found to record attendance."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         service = AttendanceCalculationService(
-            employee=serializer.validated_data["employee"],
+            employee=employee,
         )
 
         attendance = service.process_check_out(
             check_out=serializer.validated_data["check_out"],
-            remarks=serializer.validated_data["remarks"],
+            remarks=serializer.validated_data.get("remarks", ""),
         )
 
         return Response(

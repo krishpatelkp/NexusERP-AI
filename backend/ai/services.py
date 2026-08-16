@@ -9,10 +9,8 @@ Flow:
     1. Receive question + context
     2. Planner selects tools
     3. Executor runs tools
-    4. LLM generates natural language response
+    4. LLM generates natural language response (or tool output fallback)
     5. Return response
-
-This is the AI equivalent of your other service classes.
 ==========================================================
 """
 
@@ -42,6 +40,26 @@ class AIService:
         self.planner = Planner(self.client, self.registry)
         self.executor = Executor(self.registry)
 
+    def _keyword_plan(self, question: str) -> list:
+        """
+        Fallback keyword tool selector when LLM is unreachable.
+        """
+        q = question.lower()
+        tools = []
+        if "absent" in q or "attendance" in q or "present" in q:
+            tools.append("attendance_dashboard")
+        elif "payroll" in q or "salary" in q or "payslip" in q or "cost" in q:
+            tools.append("payroll_summary")
+        elif "employee" in q or "staff" in q or "headcount" in q or "department" in q:
+            tools.append("employee_summary")
+        elif "leave" in q or "vacation" in q or "holiday" in q:
+            tools.append("leave_summary")
+        elif "asset" in q or "inventory" in q or "maintenance" in q:
+            tools.append("inventory_summary")
+        elif "payment" in q or "due" in q:
+            tools.append("payment_summary")
+        return tools
+
     def chat(
         self,
         question: str,
@@ -51,30 +69,6 @@ class AIService:
     ) -> dict:
         """
         Process a chat message and return the AI response.
-
-        Parameters
-        ----------
-        question : str
-            The user's natural language question.
-
-        company : Company instance
-            Used for data isolation in all tools.
-
-        user : User instance
-            The authenticated user.
-
-        conversation_history : list, optional
-            Previous messages for context.
-
-        Returns
-        -------
-        dict
-            {
-                "response":     str,   — natural language answer
-                "tools_used":   list,  — tool names that ran
-                "tool_results": list,  — raw structured data
-                "success":      bool,
-            }
         """
 
         context = ToolContext(
@@ -82,87 +76,88 @@ class AIService:
             user=user,
         )
 
-        # ── Step 1: Check Ollama is available ─────────────
-        if not self.client.is_available():
+        is_ollama_online = self.client.is_available()
+        tool_names = []
+
+        if is_ollama_online:
+            try:
+                tool_names = self.planner.plan(question)
+            except Exception:
+                tool_names = self._keyword_plan(question)
+        else:
+            tool_names = self._keyword_plan(question)
+
+        # Off-topic / Unmapped guardrail
+        if not tool_names:
             return {
                 "response": (
-                    "I'm currently unable to connect to the AI model. "
-                    "Please ensure Ollama is running and try again."
+                    "I am NexusERP AI, an enterprise assistant built exclusively for NexusERP. "
+                    "I can only assist with enterprise operations such as Employees, Attendance, "
+                    "Leave Management, Payroll, Inventory, Payments, and Company Reports."
                 ),
                 "tools_used":   [],
                 "tool_results": [],
-                "success":      False,
+                "success":      True,
             }
 
-        # ── Step 2: Plan — choose tools ───────────────────
-        try:
-            tool_names = self.planner.plan(question)
-        except Exception as exc:
-            return {
-                "response": (
-                    "I had trouble understanding your question. "
-                    "Could you rephrase it?"
-                ),
-                "tools_used":   [],
-                "tool_results": [],
-                "success":      False,
-            }
-
-        # ── Step 3: Execute tools ─────────────────────────
+        # Execute tools
         tool_results = []
         tools_used = []
 
-        if tool_names:
-            results = self.executor.execute(
-                tool_names=tool_names,
-                context=context,
-            )
-
-            for result in results:
-                tools_used.append(result.tool)
-                tool_results.append(result.to_dict())
-
-        # ── Step 4: Build messages for LLM ───────────────
-        tool_results_text = json.dumps(
-            tool_results,
-            indent=2,
-            default=str,
+        results = self.executor.execute(
+            tool_names=tool_names,
+            context=context,
         )
 
-        response_prompt = RESPONSE_PROMPT.format(
-            question=question,
-            tool_results=tool_results_text,
-        )
+        for result in results:
+            tools_used.append(result.tool)
+            tool_results.append(result.to_dict())
 
-        messages = [
-            {
-                "role":    "system",
-                "content": SYSTEM_PROMPT,
-            },
-        ]
-
-        # Add conversation history for context
-        if conversation_history:
-            messages.extend(conversation_history)
-
-        messages.append({
-            "role":    "user",
-            "content": response_prompt,
-        })
-
-        # ── Step 5: Get LLM response ──────────────────────
-        try:
-            response_text = self.client.chat(
-                messages=messages,
-                temperature=0.3,
+        # Build natural language response
+        if is_ollama_online:
+            tool_results_text = json.dumps(
+                tool_results,
+                indent=2,
+                default=str,
             )
-        except LLMConnectionException as exc:
-            return {
-                "response":     str(exc),
-                "tools_used":   tools_used,
-                "tool_results": tool_results,
-                "success":      False,
-            }
+
+            response_prompt = RESPONSE_PROMPT.format(
+                question=question,
+                tool_results=tool_results_text,
+            )
+
+            messages = [
+                {
+                    "role":    "system",
+                    "content": SYSTEM_PROMPT,
+                },
+            ]
+
+            if conversation_history:
+                messages.extend(conversation_history)
+
+            messages.append({
+                "role":    "user",
+                "content": response_prompt,
+            })
+
+            try:
+                response_text = self.client.chat(
+                    messages=messages,
+                    temperature=0.3,
+                )
+                return {
+                    "response":     response_text,
+                    "tools_used":   tools_used,
+                    "tool_results": tool_results,
+                    "success":      True,
+                }
+            except Exception:
+                pass
+
+        # Fallback to direct tool result message if LLM formatting unavailable
+        messages = [r.message for r in results if r.success and r.message]
+        response_text = "\n\n".join(messages) if messages else "Execution completed."
 
         return {
             "response":     response_text,

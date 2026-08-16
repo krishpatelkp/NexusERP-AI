@@ -82,7 +82,13 @@ class LeaveRequestCreateAPIView(
             raise_exception=True,
         )
 
-        employee = request.user.employee_profile
+        employee = getattr(request.user, "employee_profile", None) or Employee.objects.filter(is_active=True).first()
+
+        if not employee:
+            return Response(
+                {"error": "No active employee profile found to apply for leave."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         service = LeaveService(
             employee=employee,
@@ -90,24 +96,19 @@ class LeaveRequestCreateAPIView(
 
         try:
             leave_request = service.apply_leave(
-                leave_type=serializer.validated_data[
-                    "leave_type"
-                ],
-                start_date=serializer.validated_data[
-                    "start_date"
-                ],
-                end_date=serializer.validated_data[
-                    "end_date"
-                ],
-                is_half_day=serializer.validated_data[
-                    "is_half_day"
-                ],
-                reason=serializer.validated_data[
-                    "reason"
-                ],
+                leave_type=serializer.validated_data["leave_type"],
+                start_date=serializer.validated_data["start_date"],
+                end_date=serializer.validated_data["end_date"],
+                is_half_day=serializer.validated_data.get("is_half_day", False),
+                reason=serializer.validated_data.get("reason", ""),
             )
         except DjangoValidationError as exc:
             _raise_drf(exc)
+        except Exception as exc:
+            return Response(
+                {"error": str(exc)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         return Response(
             {
@@ -147,25 +148,31 @@ class LeaveRequestListAPIView(
         LeavePagination
     )
 
-    def get_queryset(
-        self,
-    ):
-
-        return (
-            LeaveRequest.objects
-            .select_related(
-                "employee",
-                "company",
-                "leave_type",
-                "approved_by",
-            )
-            .filter(
-                employee=self.request.user.employee_profile,
-            )
-            .order_by(
-                "-created_at",
-            )
+    def get_queryset(self):
+        user = self.request.user
+        role_name = (getattr(user.role, "role_name", "") if hasattr(user, "role") and user.role else "").upper()
+        is_admin_or_hr = user.is_superuser or user.is_staff or any(
+            keyword in role_name for keyword in ["ADMIN", "HR", "MANAGER", "EXECUTIVE"]
         )
+
+        qs = LeaveRequest.objects.select_related(
+            "employee",
+            "company",
+            "leave_type",
+            "approved_by",
+        ).order_by("-created_at")
+
+        if is_admin_or_hr:
+            if user.is_superuser or not user.company:
+                return qs
+            return qs.filter(company=user.company)
+
+        emp_profile = getattr(user, "employee_profile", None)
+        if emp_profile:
+            return qs.filter(employee=emp_profile)
+        if user.company:
+            return qs.filter(company=user.company)
+        return qs.none()
     
 
 # ==========================================================
@@ -187,24 +194,29 @@ class LeaveRequestRetrieveAPIView(
         permissions.IsAuthenticated,
     )
 
-    def get_queryset(
-        self,
-    ):
-
-        employee = self.request.user.employee_profile
-
-        return (
-            LeaveRequest.objects
-            .select_related(
-                "employee",
-                "company",
-                "leave_type",
-                "approved_by",
-            )
-            .filter(
-                employee=employee,
-            )
+    def get_queryset(self):
+        user = self.request.user
+        role_name = (getattr(user.role, "role_name", "") if hasattr(user, "role") and user.role else "").upper()
+        is_admin_or_hr = user.is_superuser or user.is_staff or any(
+            keyword in role_name for keyword in ["ADMIN", "HR", "MANAGER", "EXECUTIVE"]
         )
+
+        qs = LeaveRequest.objects.select_related(
+            "employee",
+            "company",
+            "leave_type",
+            "approved_by",
+        )
+
+        if is_admin_or_hr:
+            if user.is_superuser or not user.company:
+                return qs
+            return qs.filter(company=user.company)
+
+        emp_profile = getattr(user, "employee_profile", None)
+        if emp_profile:
+            return qs.filter(employee=emp_profile)
+        return qs.none()
     
 
 # ==========================================================
@@ -422,3 +434,62 @@ class CancelLeaveAPIView(
             },
             status=status.HTTP_200_OK,
         )
+
+
+# ==========================================================
+# LEAVE TYPE LIST API
+# ==========================================================
+
+class LeaveTypeListAPIView(generics.ListAPIView):
+    """
+    List active leave policies.
+    """
+    serializer_class = LeaveTypeSerializer
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get_queryset(self):
+        from django.db.models import Q
+        user = self.request.user
+        qs = LeaveType.objects.filter(is_active=True)
+        if user.company:
+            comp_qs = qs.filter(Q(company=user.company) | Q(company__isnull=True))
+            if comp_qs.exists():
+                return comp_qs
+        return qs
+
+
+# ==========================================================
+# LEAVE BALANCE LIST API
+# ==========================================================
+
+class LeaveBalanceListAPIView(generics.ListAPIView):
+    """
+    List employee leave balances.
+    """
+    serializer_class = LeaveBalanceSerializer
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get_queryset(self):
+        user = self.request.user
+        role_name = (getattr(user.role, "role_name", "") if hasattr(user, "role") and user.role else "").upper()
+        is_admin_or_hr = user.is_superuser or user.is_staff or any(
+            keyword in role_name for keyword in ["ADMIN", "HR", "MANAGER", "EXECUTIVE"]
+        )
+
+        qs = LeaveBalance.objects.select_related(
+            "employee",
+            "leave_type",
+            "company",
+        ).order_by("-year", "leave_type__leave_name")
+
+        if is_admin_or_hr:
+            if user.is_superuser or not user.company:
+                return qs
+            return qs.filter(company=user.company)
+
+        emp_profile = getattr(user, "employee_profile", None)
+        if emp_profile:
+            return qs.filter(employee=emp_profile)
+        if user.company:
+            return qs.filter(company=user.company)
+        return qs.none()

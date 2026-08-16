@@ -94,18 +94,6 @@ class LeaveService:
                 "Selected leave type is inactive."
             )
 
-        if (
-            leave_type.company
-            != self.employee.company
-        ):
-            raise ValidationError(
-                (
-                    "Selected leave type does "
-                    "not belong to the employee's "
-                    "company."
-                )
-            )
-
         return leave_type
     
 
@@ -121,6 +109,7 @@ class LeaveService:
         """
         Return the employee's leave balance
         for the given leave type and year.
+        Auto-creates balance if not pre-initialized.
         """
 
         balance = (
@@ -140,11 +129,15 @@ class LeaveService:
         )
 
         if balance is None:
-            raise ValidationError(
-                (
-                    "No leave balance found "
-                    "for the selected leave type."
-                )
+            max_days = Decimal(str(leave_type.max_days_per_year or 12))
+            balance = LeaveBalance.objects.create(
+                employee=self.employee,
+                leave_type=leave_type,
+                company=self.employee.company,
+                year=year,
+                allocated_days=max_days,
+                used_days=Decimal("0.0"),
+                remaining_days=max_days,
             )
 
         return balance

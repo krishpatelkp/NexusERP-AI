@@ -156,6 +156,20 @@ class UserProfileSerializer(serializers.ModelSerializer):
         default=None,
     )
 
+    employee_id = serializers.IntegerField(
+        source="employee_profile.id",
+        read_only=True,
+        allow_null=True,
+        default=None,
+    )
+
+    employee_code = serializers.CharField(
+        source="employee_profile.employee_id",
+        read_only=True,
+        allow_null=True,
+        default=None,
+    )
+
     class Meta:
         model = User
         fields = (
@@ -167,6 +181,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "company_name",
             "role",
             "role_name",
+            "employee_id",
+            "employee_code",
             "is_verified",
             "is_active",
             "created_at",
