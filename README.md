@@ -40,7 +40,7 @@
 - **Hardware & Asset Inventory**: Enterprise asset allocation, custodian tracking, serial number auditing, and condition monitoring.
 - **Payments & Outbound Expense Hub**: Vendor disbursements, invoice records, expense approvals, payment status audits, and transaction logs.
 - **Executive Analytics & Reports Studio**: Real-time reporting engine delivering departmental breakdowns, payroll commitments, attendance metrics, and downloadable operational datasets.
-- **NexusERP AI Copilot**: Autonomous conversational assistant utilizing schema-validated LLM tool calling to answer queries, analyze trends, inspect employee metrics, and assist executive decision-making.
+- **NexusERP AI Copilot**: Autonomous conversational assistant utilizing 20 schema-validated domain tools to query attendance KPIs and exceptions, employee directory records, leave balances and pending requests, payroll summaries and department costs, hardware asset assignments and maintenance logs, pending vendor payments, and historical headcount/payroll/maintenance trends.
 
 ---
 
@@ -71,7 +71,7 @@ The **AI Attendance Analytics** system combines automated attendance anomaly det
                                        v
 +--------------------------------------------------------------------------------+
 |                   3. LLM SYNTHESIS & PLAIN-ENGLISH NARRATION                   |
-|  - Dual Inference Engine: Groq API (llama-3.3-70b) or local Ollama (qwen3:8b)  |
+|  - Dual Inference Engine: Groq (llama-3.3-70b-versatile) or Ollama (qwen3:8b)  |
 |  - Plain-English Narration: Translates database exception rows into actionable |
 |    HR summaries and workforce insights                                         |
 |  - Offline Formatter: Deterministic fallback message generator if offline      |
@@ -80,7 +80,7 @@ The **AI Attendance Analytics** system combines automated attendance anomaly det
 
 1. **Deterministic Anomaly & Exception Detection**: The backend (`attendance/reports.py`) audits employee check-in logs against company shift configurations, flagging late arrivals against grace periods, unexcused absences, early departures, and missing check-outs.
 2. **Agentic Tool Selection**: When an executive or HR manager interacts with the AI Copilot (`"Who came late today?"` or `"Which employees have attendance exceptions?"`), the AI planner (`ai/planner.py`) inspects the query and selects the appropriate tool from the tool registry.
-3. **Rule-Based Fallback Planner**: If the LLM service is offline or unreachable, `_keyword_plan` (`ai/services.py:L43`) provides deterministic keyword routing directly to the appropriate attendance reports.
+3. **Rule-Based Fallback Planner**: If the LLM service is offline or unreachable, `_keyword_plan` in `ai/services.py` provides deterministic keyword routing directly to the appropriate attendance reports.
 4. **LLM Synthesis & Narration**: The LLM client (`ai/llm/ollama_client.py`, supporting high-speed Groq inference and local Ollama) takes the structured JSON results from tool execution and generates a coherent, plain-English summary for HR decision-makers.
 
 ---
@@ -92,7 +92,7 @@ The **AI Attendance Analytics** system combines automated attendance anomaly det
 | **Frontend** | React 19, TypeScript, JavaScript (ESNext), Vite (configured on port 3000), Tailwind CSS, Lucide Icons, Axios |
 | **Backend** | Python 3.12, Django 6.0, Django REST Framework (DRF), SimpleJWT, Django-Filter |
 | **Database** | PostgreSQL 14+ (ACID compliant, relational schemas, indexed foreign keys, multi-tenant isolation) |
-| **AI / LLM** | Groq API (`llama-3.3-70b-versatile`), Ollama (`qwen2.5` / `llama3`), Schema-validated Tool Calling, Rule-based Fallback Planner |
+| **AI / LLM** | Groq API (`llama-3.3-70b-versatile`), Ollama (`qwen3:8b`), Schema-validated Tool Calling, Rule-based Fallback Planner |
 | **Security** | JWT Authentication with token rotation, CORS origin isolation, Argon2/PBKDF2 hashing, tenant-isolated ORM queries |
 
 ---
