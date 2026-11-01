@@ -44,41 +44,44 @@
 
 ---
 
-## AI Attendance-Risk Feature
+## AI Attendance Analytics & Anomaly Detection
 
 ### How It Works
-The **AI Attendance-Risk** feature is a predictive analytics mechanism designed to identify emerging absenteeism and attrition signals before they affect operational delivery or payroll accuracy.
+The **AI Attendance Analytics** system combines automated attendance anomaly detection with an agentic LLM tool-calling engine, allowing HR leaders to query workforce patterns and exceptions in plain English.
 
 ```
 +--------------------------------------------------------------------------------+
-|                           DATA COLLECTION & EXTRACTION                         |
-|  - Rolling 30-Day Check-in / Check-out timestamps                              |
-|  - Late arrival frequency & grace-minute deviations                            |
-|  - Unexcused absences vs. Approved leave patterns                              |
-|  - Shift anomalies and missing checkouts                                       |
+|                   1. ATTENDANCE ANOMALY & KPI ENGINE                           |
+|  - Live Daily KPIs: present, absent, on-leave, late arrivals, half-days        |
+|  - Exception Tracking: late minutes past grace period, early exits, missing    |
+|    check-ins/check-outs, manual entry modifications, pending approvals         |
+|  - Per-Employee Monthly Summaries: total working, overtime, and late minutes   |
 +--------------------------------------------------------------------------------+
                                        |
                                        v
 +--------------------------------------------------------------------------------+
-|                         PREDICTIVE RISK SCORING ENGINE                         |
-|  - Score 00 - 29 (Low Risk): Stable punctuality, excused leaves only           |
-|  - Score 30 - 69 (Medium Risk): Moderate late arrivals, sporadic unexcused off |
-|  - Score 70 - 100 (High Risk): Chronic tardiness, clusters of missed days      |
+|                   2. AI COPILOT TOOL-CALLING ORCHESTRATOR                      |
+|  - Intent Parsing: Maps natural language questions to specialized tools       |
+|    (`attendance_dashboard`, `attendance_summary`, `attendance_exceptions`)    |
+|  - Deterministic Keyword Fallback: Rules-based tool selector executes safely   |
+|    if LLM inference is offline or unreachable                                  |
+|  - Context Isolation: Queries strictly scoped to user's authenticated tenant   |
 +--------------------------------------------------------------------------------+
                                        |
                                        v
 +--------------------------------------------------------------------------------+
-|                          AUTONOMOUS AI COPILOT ACTIONS                         |
-|  - Surfaces high-risk employees in executive queries                           |
-|  - Proposes proactive check-in meetings for managers                           |
-|  - Recommends shift adjustments or leave balance audits                        |
+|                   3. LLM SYNTHESIS & PLAIN-ENGLISH NARRATION                   |
+|  - Dual Inference Engine: Groq API (llama-3.3-70b) or local Ollama (qwen3:8b)  |
+|  - Plain-English Narration: Translates database exception rows into actionable |
+|    HR summaries and workforce insights                                         |
+|  - Offline Formatter: Deterministic fallback message generator if offline      |
 +--------------------------------------------------------------------------------+
 ```
 
-1. **Feature Engineering**: The backend aggregates check-in timestamps, working durations, consecutive unexcused absences, and late arrival minutes against company-defined grace periods.
-2. **Behavioral Pattern Recognition**: Detects anomalies such as repeated patterns of absent days directly before or after weekends and holidays.
-3. **Risk Stratification**: Employees are classified into Low, Medium, and High Risk tiers, highlighting personnel requiring support, workload re-balancing, or policy intervention.
-4. **Autonomous Copilot Recommendations**: When queried through the AI Copilot (`"Show me attendance risks for Engineering"`), the copilot executes live tool calls against the database, summarizes the risk indicators, and generates recommended actions for HR leaders.
+1. **Deterministic Anomaly & Exception Detection**: The backend (`attendance/reports.py`) audits employee check-in logs against company shift configurations, flagging late arrivals against grace periods, unexcused absences, early departures, and missing check-outs.
+2. **Agentic Tool Selection**: When an executive or HR manager interacts with the AI Copilot (`"Who came late today?"` or `"Which employees have attendance exceptions?"`), the AI planner (`ai/planner.py`) inspects the query and selects the appropriate tool from the tool registry.
+3. **Rule-Based Fallback Planner**: If the LLM service is offline or unreachable, `_keyword_plan` (`ai/services.py:L43`) provides deterministic keyword routing directly to the appropriate attendance reports.
+4. **LLM Synthesis & Narration**: The LLM client (`ai/llm/ollama_client.py`, supporting high-speed Groq inference and local Ollama) takes the structured JSON results from tool execution and generates a coherent, plain-English summary for HR decision-makers.
 
 ---
 
