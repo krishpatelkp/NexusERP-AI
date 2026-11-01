@@ -499,21 +499,6 @@ class LeaveBalanceListAPIView(generics.ListAPIView):
                 return qs.filter(company=company)
             emp_profile = getattr(user, "employee_profile", None)
             if emp_profile:
-                from django.utils import timezone
-                from django.db.models import Q
-                current_year = timezone.now().year
-                for lt in LeaveType.objects.filter(Q(company=company) | Q(company__isnull=True), is_active=True):
-                    LeaveBalance.objects.get_or_create(
-                        employee=emp_profile,
-                        leave_type=lt,
-                        company=company,
-                        year=current_year,
-                        defaults={
-                            "allocated_days": lt.max_days_per_year,
-                            "used_days": 0,
-                            "remaining_days": lt.max_days_per_year,
-                        }
-                    )
                 return qs.filter(employee=emp_profile, company=company)
             return qs.none()
 

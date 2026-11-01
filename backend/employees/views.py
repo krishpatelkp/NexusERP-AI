@@ -1,15 +1,4 @@
-def get_user_company(user):
-    if not user or not user.is_authenticated:
-        return None
-    if getattr(user, 'company', None):
-        return user.company
-    emp_profile = getattr(user, 'employee_profile', None)
-    if emp_profile and getattr(emp_profile, 'company', None):
-        return emp_profile.company
-    if getattr(user, 'is_superuser', False):
-        from company.models import Company
-        return Company.objects.first()
-    return None
+from core.utils import get_user_company
 
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated

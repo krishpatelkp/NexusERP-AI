@@ -656,3 +656,42 @@ class LeaveRequest(models.Model):
             f"{self.leave_type_snapshot}"
             f" ({self.start_date} → {self.end_date})"
         )
+
+
+# ==========================================================
+# EMPLOYEE POST-SAVE SIGNAL: AUTO-INITIALIZE LEAVE BALANCES
+# ==========================================================
+
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from employees.models import Employee
+from django.utils import timezone
+from django.db.models import Q
+
+
+@receiver(post_save, sender=Employee)
+def ensure_employee_leave_balances(sender, instance, created, **kwargs):
+    """
+    Ensures newly created or updated employees always have initialized leave
+    balances for all active leave types in their company for the current year.
+    """
+    company = getattr(instance, "company", None)
+    if not company:
+        return
+    current_year = timezone.now().year
+    active_leave_types = LeaveType.objects.filter(
+        Q(company=company) | Q(company__isnull=True),
+        is_active=True,
+    )
+    for lt in active_leave_types:
+        LeaveBalance.objects.get_or_create(
+            employee=instance,
+            leave_type=lt,
+            company=company,
+            year=current_year,
+            defaults={
+                "allocated_days": lt.max_days_per_year,
+                "used_days": 0,
+                "remaining_days": lt.max_days_per_year,
+            },
+        )

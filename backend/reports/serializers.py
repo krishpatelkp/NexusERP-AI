@@ -133,30 +133,11 @@ class AttendanceSummarySerializer(
     total_late_minutes     = serializers.IntegerField()
 
 
-class DailyAttendanceSerializer(
-    serializers.Serializer,
-):
+class EmployeeReportResolverMixin:
     """
-    Serializer for daily_report().
-    Each row is one attendance record for a date.
+    Shared resolver methods for resolving employee ID, name, department,
+    and designation from both ORM model instances and annotated dicts.
     """
-
-    id              = serializers.IntegerField(read_only=True)
-    employee_id     = serializers.SerializerMethodField()
-    employee_name   = serializers.SerializerMethodField()
-    department      = serializers.SerializerMethodField()
-    designation     = serializers.SerializerMethodField()
-    shift_name      = serializers.SerializerMethodField()
-    date            = serializers.DateField()
-    check_in        = serializers.DateTimeField(allow_null=True)
-    check_out       = serializers.DateTimeField(allow_null=True)
-    working_minutes = serializers.IntegerField(default=0, required=False)
-    late_minutes    = serializers.IntegerField(default=0, required=False)
-    early_exit_minutes = serializers.IntegerField(default=0, required=False)
-    overtime_minutes   = serializers.IntegerField(default=0, required=False)
-    status             = serializers.CharField(default='PRESENT')
-    attendance_source  = serializers.CharField(default='WEB', required=False)
-    approval_status    = serializers.CharField(default='APPROVED', required=False)
 
     def get_employee_id(self, obj):
         if hasattr(obj, "employee") and obj.employee:
@@ -178,6 +159,33 @@ class DailyAttendanceSerializer(
         if hasattr(obj, "employee") and obj.employee and obj.employee.designation:
             return obj.employee.designation.designation_name
         return obj.get("designation", None) if isinstance(obj, dict) else None
+
+
+class DailyAttendanceSerializer(
+    EmployeeReportResolverMixin,
+    serializers.Serializer,
+):
+    """
+    Serializer for daily_report().
+    Each row is one attendance record for a date.
+    """
+
+    id                 = serializers.IntegerField(read_only=True)
+    employee_id        = serializers.SerializerMethodField()
+    employee_name      = serializers.SerializerMethodField()
+    department         = serializers.SerializerMethodField()
+    designation        = serializers.SerializerMethodField()
+    shift_name         = serializers.SerializerMethodField()
+    date               = serializers.DateField()
+    check_in           = serializers.DateTimeField(allow_null=True)
+    check_out          = serializers.DateTimeField(allow_null=True)
+    working_minutes    = serializers.IntegerField(allow_null=True, required=False)
+    late_minutes       = serializers.IntegerField(allow_null=True, required=False)
+    early_exit_minutes = serializers.IntegerField(allow_null=True, required=False)
+    overtime_minutes   = serializers.IntegerField(allow_null=True, required=False)
+    status             = serializers.CharField(allow_null=True, required=False)
+    attendance_source  = serializers.CharField(allow_null=True, required=False)
+    approval_status    = serializers.CharField(allow_null=True, required=False)
 
     def get_shift_name(self, obj):
         if hasattr(obj, "shift") and obj.shift:
@@ -188,6 +196,7 @@ class DailyAttendanceSerializer(
 
 
 class EmployeeAttendanceHistorySerializer(
+    EmployeeReportResolverMixin,
     serializers.Serializer,
 ):
     """
@@ -195,44 +204,23 @@ class EmployeeAttendanceHistorySerializer(
     One row per attendance record for one employee.
     """
 
-    id                 = serializers.IntegerField(read_only=True)
-    employee_id        = serializers.SerializerMethodField()
-    employee_name      = serializers.SerializerMethodField()
-    department         = serializers.SerializerMethodField()
-    designation        = serializers.SerializerMethodField()
-    date               = serializers.DateField()
-    check_in           = serializers.DateTimeField(allow_null=True)
-    check_out          = serializers.DateTimeField(allow_null=True)
-    working_minutes    = serializers.IntegerField(default=0, required=False)
-    late_minutes       = serializers.IntegerField(default=0, required=False)
-    early_exit_minutes = serializers.IntegerField(default=0, required=False)
-    overtime_minutes   = serializers.IntegerField(default=0, required=False)
-    status             = serializers.CharField(default='PRESENT')
-    remarks            = serializers.CharField(allow_blank=True, default="", required=False)
-    attendance_source  = serializers.CharField(default='WEB', required=False)
-    attendance_modified = serializers.BooleanField(default=False, required=False)
-    approval_status    = serializers.CharField(default='APPROVED', required=False)
-
-    def get_employee_id(self, obj):
-        if hasattr(obj, "employee") and obj.employee:
-            return obj.employee.employee_id
-        return obj.get("employee_id", "") if isinstance(obj, dict) else ""
-
-    def get_employee_name(self, obj):
-        if hasattr(obj, "employee") and obj.employee:
-            emp = obj.employee
-            return getattr(emp, "full_name", f"{getattr(emp, 'first_name', '')} {getattr(emp, 'last_name', '')}".strip())
-        return obj.get("employee_name", "") if isinstance(obj, dict) else ""
-
-    def get_department(self, obj):
-        if hasattr(obj, "employee") and obj.employee and obj.employee.department:
-            return obj.employee.department.department_name
-        return obj.get("department", None) if isinstance(obj, dict) else None
-
-    def get_designation(self, obj):
-        if hasattr(obj, "employee") and obj.employee and obj.employee.designation:
-            return obj.employee.designation.designation_name
-        return obj.get("designation", None) if isinstance(obj, dict) else None
+    id                  = serializers.IntegerField(read_only=True)
+    employee_id         = serializers.SerializerMethodField()
+    employee_name       = serializers.SerializerMethodField()
+    department          = serializers.SerializerMethodField()
+    designation         = serializers.SerializerMethodField()
+    date                = serializers.DateField()
+    check_in            = serializers.DateTimeField(allow_null=True)
+    check_out           = serializers.DateTimeField(allow_null=True)
+    working_minutes     = serializers.IntegerField(allow_null=True, required=False)
+    late_minutes        = serializers.IntegerField(allow_null=True, required=False)
+    early_exit_minutes  = serializers.IntegerField(allow_null=True, required=False)
+    overtime_minutes    = serializers.IntegerField(allow_null=True, required=False)
+    status              = serializers.CharField(allow_null=True, required=False)
+    remarks             = serializers.CharField(allow_blank=True, allow_null=True, required=False)
+    attendance_source   = serializers.CharField(allow_null=True, required=False)
+    attendance_modified = serializers.BooleanField(allow_null=True, required=False)
+    approval_status     = serializers.CharField(allow_null=True, required=False)
 
 
 class MonthlyAttendanceSummarySerializer(
@@ -350,6 +338,7 @@ class AttendanceTrendSerializer(
 
 
 class AttendanceExceptionSerializer(
+    EmployeeReportResolverMixin,
     serializers.Serializer,
 ):
     """
@@ -365,37 +354,16 @@ class AttendanceExceptionSerializer(
     date                = serializers.DateField()
     check_in            = serializers.DateTimeField(allow_null=True)
     check_out           = serializers.DateTimeField(allow_null=True)
-    working_minutes     = serializers.IntegerField(default=0, required=False)
-    late_minutes        = serializers.IntegerField(default=0, required=False)
-    early_exit_minutes  = serializers.IntegerField(default=0, required=False)
-    overtime_minutes    = serializers.IntegerField(default=0, required=False)
-    status              = serializers.CharField(default='ABSENT')
-    attendance_source   = serializers.CharField(default='WEB', required=False)
-    attendance_modified = serializers.BooleanField(default=False, required=False)
-    approval_status     = serializers.CharField(default='PENDING', required=False)
-    approval_reason     = serializers.CharField(allow_blank=True, default="", required=False)
-    remarks             = serializers.CharField(allow_blank=True, default="", required=False)
-
-    def get_employee_id(self, obj):
-        if hasattr(obj, "employee") and obj.employee:
-            return obj.employee.employee_id
-        return obj.get("employee_id", "") if isinstance(obj, dict) else ""
-
-    def get_employee_name(self, obj):
-        if hasattr(obj, "employee") and obj.employee:
-            emp = obj.employee
-            return getattr(emp, "full_name", f"{getattr(emp, 'first_name', '')} {getattr(emp, 'last_name', '')}".strip())
-        return obj.get("employee_name", "") if isinstance(obj, dict) else ""
-
-    def get_department(self, obj):
-        if hasattr(obj, "employee") and obj.employee and obj.employee.department:
-            return obj.employee.department.department_name
-        return obj.get("department", None) if isinstance(obj, dict) else None
-
-    def get_designation(self, obj):
-        if hasattr(obj, "employee") and obj.employee and obj.employee.designation:
-            return obj.employee.designation.designation_name
-        return obj.get("designation", None) if isinstance(obj, dict) else None
+    working_minutes     = serializers.IntegerField(allow_null=True, required=False)
+    late_minutes        = serializers.IntegerField(allow_null=True, required=False)
+    early_exit_minutes  = serializers.IntegerField(allow_null=True, required=False)
+    overtime_minutes    = serializers.IntegerField(allow_null=True, required=False)
+    status              = serializers.CharField(allow_null=True, required=False)
+    attendance_source   = serializers.CharField(allow_null=True, required=False)
+    attendance_modified = serializers.BooleanField(allow_null=True, required=False)
+    approval_status     = serializers.CharField(allow_null=True, required=False)
+    approval_reason     = serializers.CharField(allow_blank=True, allow_null=True, required=False)
+    remarks             = serializers.CharField(allow_blank=True, allow_null=True, required=False)
 
 
 class TopAbsenteesSerializer(
