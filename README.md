@@ -5,15 +5,15 @@
 [![DRF](https://img.shields.io/badge/Django_REST_Framework-3.15-red?logo=django&logoColor=white)](https://www.django-rest-framework.org/)
 [![React](https://img.shields.io/badge/React-19.0-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%2B-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14%2B-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Vite](https://img.shields.io/badge/Vite-6.0-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ---
 
 ## Overview
 
-**NexusERP-AI** is a cloud-native, multi-tenant Enterprise Resource Planning (ERP) and Human Resource Management System (HRMS) engineered to centralize, automate, and streamline organizational workflows. Built on a strict tenant-isolated architecture powered by Django REST Framework and React with TypeScript, the platform unifies employee lifecycle management, biometric-grade attendance tracking, multi-tier leave administration, algorithmic payroll calculation, hardware asset auditing, and outbound financial disbursements into a unified single-pane interface. By integrating an autonomous AI Copilot with tool-calling capabilities (supporting both high-speed cloud inference via Groq and private on-premises execution via Ollama), NexusERP-AI transforms operational business data into predictive, actionable intelligence.
+**NexusERP-AI** is a multi-tenant Enterprise Resource Planning (ERP) and Human Resource Management System (HRMS) engineered to centralize, automate, and streamline organizational workflows. Built on a strict tenant-isolated architecture powered by Django REST Framework and React with TypeScript, the platform unifies employee lifecycle management, attendance tracking, multi-tier leave administration, algorithmic payroll calculation, hardware asset auditing, and outbound financial disbursements into a unified single-pane interface. By integrating an autonomous AI Copilot with tool-calling capabilities (supporting both high-speed cloud inference via Groq and private on-premises execution via Ollama), NexusERP-AI transforms operational business data into predictive, actionable intelligence.
 
 ---
 
@@ -53,9 +53,9 @@ The **AI Attendance-Risk** feature is a predictive analytics mechanism designed 
 +--------------------------------------------------------------------------------+
 |                           DATA COLLECTION & EXTRACTION                         |
 |  - Rolling 30-Day Check-in / Check-out timestamps                              |
-|  - Late Arrival frequency & grace-minute deviations                            |
+|  - Late arrival frequency & grace-minute deviations                            |
 |  - Unexcused absences vs. Approved leave patterns                              |
-|  - Monday/Friday proximity correlations                                        |
+|  - Shift anomalies and missing checkouts                                       |
 +--------------------------------------------------------------------------------+
                                        |
                                        v
@@ -86,11 +86,11 @@ The **AI Attendance-Risk** feature is a predictive analytics mechanism designed 
 
 | Layer | Technologies |
 | :--- | :--- |
-| **Frontend** | React 19, TypeScript, JavaScript (ESNext), Vite, Tailwind CSS, Lucide Icons, Axios |
+| **Frontend** | React 19, TypeScript, JavaScript (ESNext), Vite (configured on port 3000), Tailwind CSS, Lucide Icons, Axios |
 | **Backend** | Python 3.12, Django 6.0, Django REST Framework (DRF), SimpleJWT, Django-Filter |
-| **Database** | PostgreSQL 16+ (ACID compliant, relational schemas, indexed foreign keys, multi-tenant isolation) |
-| **AI / LLM** | Groq API (`llama-3.3-70b-versatile`), Ollama (`qwen2.5` / `llama3`), Tool Calling / Function Calling |
-| **Security** | JWT Authentication with token rotation, CORS origin isolation, Argon2/PBKDF2 hashing, zero credential leaks |
+| **Database** | PostgreSQL 14+ (ACID compliant, relational schemas, indexed foreign keys, multi-tenant isolation) |
+| **AI / LLM** | Groq API (`llama-3.3-70b-versatile`), Ollama (`qwen2.5` / `llama3`), Schema-validated Tool Calling, Rule-based Fallback Planner |
+| **Security** | JWT Authentication with token rotation, CORS origin isolation, Argon2/PBKDF2 hashing, tenant-isolated ORM queries |
 
 ---
 
@@ -209,30 +209,15 @@ CREATE DATABASE nexuserp;
    ```bash
    npm run dev
    ```
-   The frontend application will be live at `http://localhost:3000`
-
----
-
-## GitHub Repository "About" Section Details
-
-When updating the repository metadata on GitHub:
-
-- **Description (one-line):**  
-  `Enterprise-grade multi-tenant HRMS & ERP platform powered by React, TypeScript, Django REST Framework, PostgreSQL, and an autonomous AI Copilot.`
-
-- **Website / Live Demo:**  
-  `https://nexuserp.vercel.app` *(or your production URL)*
-
-- **Topics:**  
-  `django` `react` `typescript` `erp` `postgresql` `hrms` `attendance-system` `payroll-management` `inventory-management` `artificial-intelligence`
+   The frontend application will be live at `http://localhost:3000` *(configured in `vite.config.js`)*.
 
 ---
 
 ## Security & Credential Hygiene
 
-- **Zero Secret Commits**: All sensitive parameters (`SECRET_KEY`, `DB_PASSWORD`, API tokens) are strictly read via OS environment variables and `.env` files.
-- **Git History Verified**: Repository history has been verified to ensure zero `.env` files or database credentials were ever tracked or committed.
-- **Multi-Tenant Protection**: Every database query is strictly filtered by the authenticated user's `company_id`. Cross-tenant data leakage is prevented at both the ORM and serializer layers.
+- **Environment Isolation**: Database credentials, tokens, and runtime configurations are kept out of source control and managed through `.env` files.
+- **Sanitized Templates**: Only sanitized `.env.example` templates are tracked in version control for development and onboarding references.
+- **Tenant Isolation**: Every database query is strictly filtered by the authenticated user's `company_id`. Cross-tenant data leakage is prevented at both the ORM and serializer layers.
 
 ---
 
