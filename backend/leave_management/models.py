@@ -672,9 +672,11 @@ from django.db.models import Q
 @receiver(post_save, sender=Employee)
 def ensure_employee_leave_balances(sender, instance, created, **kwargs):
     """
-    Ensures newly created or updated employees always have initialized leave
+    Ensures newly created employees always have initialized leave
     balances for all active leave types in their company for the current year.
     """
+    if not created:
+        return
     company = getattr(instance, "company", None)
     if not company:
         return
