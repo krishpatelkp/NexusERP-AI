@@ -14,6 +14,7 @@ export default function PaymentsPage() {
         }
         load();
     }, []);
+    const totalDisbursed = payments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
     return (<div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div>
         <h1 className="heading-lg" style={{ fontSize: 28, marginBottom: 4 }}>Payments & Financial Audit Hub</h1>
@@ -21,23 +22,26 @@ export default function PaymentsPage() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-        <KPICard label="Total Disbursed" value="₹85,000" change="Successful Transfers" icon={CreditCard}/>
-        <KPICard label="Total Transactions" value={payments.length || 2} change="Audit Records" icon={ArrowUpRight}/>
+        <KPICard label="Total Disbursed" value={`₹${totalDisbursed.toLocaleString()}`} change="Successful Transfers" icon={CreditCard}/>
+        <KPICard label="Total Transactions" value={payments.length} change="Audit Records" icon={ArrowUpRight}/>
       </div>
 
       <Card>
         <Table columns={[
-            { header: 'Transaction Ref', accessor: (row) => row.payment_reference || `PAY-2026-${row.id}` },
+            { header: 'Payment #', accessor: (row) => row.payment_number || `PAY-${row.id}` },
+            { header: 'Employee', accessor: (row) => row.employee_name || 'N/A' },
             { header: 'Payment Method', accessor: (row) => row.payment_method || 'Bank Transfer' },
-            { header: 'Amount', accessor: (row) => `₹${Number(row.amount || 85000).toLocaleString()}` },
-            { header: 'Disbursement Date', accessor: (row) => row.processed_at || new Date().toISOString().split('T')[0] },
+            { header: 'Amount', accessor: (row) => `₹${Number(row.amount || 0).toLocaleString()}` },
+            { header: 'Disbursement Date', accessor: (row) => row.payment_date || row.processed_at?.split('T')[0] || '—' },
+            { header: 'Bank / Trans Ref', accessor: (row) => row.bank_reference_number || row.transaction_id || '—' },
             {
                 header: 'Status',
-                accessor: (row) => (<Badge variant={row.status === 'COMPLETED' || row.status === 'SUCCESS' ? 'success' : 'warning'}>
-                  {row.status || 'COMPLETED'}
+                accessor: (row) => (<Badge variant={row.status === 'PAID' || row.status === 'COMPLETED' || row.status === 'SUCCESS' ? 'success' : row.status === 'FAILED' ? 'danger' : 'warning'}>
+                  {row.status || 'PENDING'}
                 </Badge>),
             },
         ]} data={payments} emptyText="No financial payment records found."/>
       </Card>
     </div>);
 }
+

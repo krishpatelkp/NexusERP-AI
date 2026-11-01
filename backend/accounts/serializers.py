@@ -31,6 +31,12 @@ class RegisterSerializer(serializers.ModelSerializer):
         required=True,
     )
 
+    company_name = serializers.CharField(
+        write_only=True,
+        required=False,
+        allow_blank=True,
+    )
+
     class Meta:
         model = User
         fields = (
@@ -39,6 +45,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             "phone_number",
             "password",
             "confirm_password",
+            "company_name",
             "company",
             "role",
         )
@@ -94,20 +101,67 @@ class RegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         """
         Remove confirm_password before saving.
-        Create user using our custom manager.
+        Auto-create company and bootstrap full Admin workspace with
+        departments, designations, shift, leave policies, and founder profile.
         """
+        import uuid
+        from .bootstrap import bootstrap_workspace
+
         validated_data.pop("confirm_password")
+        company_name = validated_data.pop("company_name", None)
+        company = validated_data.get("company", None)
+        role = validated_data.get("role", None)
+
+        if not company:
+            clean_name = (company_name or "").strip()
+            if not clean_name:
+                clean_name = f"{validated_data['username'].capitalize()}'s Workspace"
+
+            code = (clean_name[:3].upper() + uuid.uuid4().hex[:5].upper())
+            phone = validated_data.get("phone_number") or f"+919{uuid.uuid4().hex[:9]}"
+            comp_email = validated_data["email"]
+            if Company.objects.filter(email=comp_email).exists():
+                comp_email = f"contact_{uuid.uuid4().hex[:6]}@{clean_name.lower().replace(' ', '')}.com"
+
+            company = Company.objects.filter(company_name__iexact=clean_name).first()
+            if not company:
+                company = Company.objects.create(
+                    company_name=clean_name,
+                    company_code=code,
+                    email=comp_email,
+                    phone_number=phone[:15],
+                    address="Company Headquarters",
+                    city="Mumbai",
+                    state="Maharashtra",
+                    postal_code="400001",
+                )
+
+        if not role:
+            role = Role.objects.filter(company=company, role_code="ADMIN").first()
+            if not role:
+                role = Role.objects.create(
+                    company=company,
+                    role_name="Admin",
+                    role_code="ADMIN",
+                    description="Company Owner & System Administrator",
+                    is_active=True,
+                )
 
         user = User.objects.create_user(
             email=validated_data["email"],
             password=validated_data["password"],
             username=validated_data["username"],
             phone_number=validated_data.get("phone_number", ""),
-            company=validated_data.get("company", None),
-            role=validated_data.get("role", None),
+            company=company,
+            role=role,
+            is_staff=True,
         )
 
+        # Bootstrap complete company workspace: departments, designations, shifts, leave types, founder employee
+        bootstrap_workspace(company=company, user=user)
+
         return user
+
 
 
 # ─────────────────────────────────────────
@@ -156,6 +210,13 @@ class UserProfileSerializer(serializers.ModelSerializer):
         default=None,
     )
 
+    role_code = serializers.CharField(
+        source="role.role_code",
+        read_only=True,
+        allow_null=True,
+        default=None,
+    )
+
     employee_id = serializers.IntegerField(
         source="employee_profile.id",
         read_only=True,
@@ -181,10 +242,13 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "company_name",
             "role",
             "role_name",
+            "role_code",
             "employee_id",
             "employee_code",
             "is_verified",
             "is_active",
+            "is_superuser",
+            "is_staff",
             "created_at",
             "updated_at",
         )
@@ -252,12 +316,22 @@ class ChangePasswordSerializer(serializers.Serializer):
     )
 
     confirm_new_password = serializers.CharField(
-        required=True,
+        required=False,
+        write_only=True,
+    )
+
+    confirm_password = serializers.CharField(
+        required=False,
         write_only=True,
     )
 
     def validate(self, attrs):
-        if attrs["new_password"] != attrs["confirm_new_password"]:
+        confirm = attrs.get("confirm_new_password") or attrs.get("confirm_password")
+        if not confirm:
+            raise serializers.ValidationError(
+                {"confirm_new_password": "Confirm password is required."}
+            )
+        if attrs["new_password"] != confirm:
             raise serializers.ValidationError(
                 {"confirm_new_password": "Passwords do not match."}
             )

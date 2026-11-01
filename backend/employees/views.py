@@ -6,6 +6,9 @@ def get_user_company(user):
     emp_profile = getattr(user, 'employee_profile', None)
     if emp_profile and getattr(emp_profile, 'company', None):
         return emp_profile.company
+    if getattr(user, 'is_superuser', False):
+        from company.models import Company
+        return Company.objects.first()
     return None
 
 from rest_framework import generics
@@ -104,12 +107,14 @@ class EmployeeQuerysetMixin:
             .order_by("employee_id")
         )
 
+        company = get_user_company(self.request.user)
+        if company:
+            return queryset.filter(company=company)
+
         if self.request.user.is_superuser:
             return queryset
 
-        return queryset.filter(
-            company=get_user_company(self.request.user)
-        )
+        return queryset.none()
 
 
 # ==========================================================
@@ -143,12 +148,14 @@ class DepartmentListCreateAPIView(
             .order_by("department_name")
         )
 
+        company = get_user_company(self.request.user)
+        if company:
+            return queryset.filter(company=company)
+
         if self.request.user.is_superuser:
             return queryset
 
-        return queryset.filter(
-            company=get_user_company(self.request.user)
-        )
+        return queryset.none()
 
     def get_permissions(self):
         """
@@ -179,10 +186,15 @@ class DepartmentListCreateAPIView(
         the client to send it.
         """
 
-        company = getattr(self.request.user, "company", None)
-        if company is None and hasattr(self.request.user, "employee_profile"):
-            company = self.request.user.employee_profile.company
-        serializer.save(company=company)
+        company = get_user_company(self.request.user)
+        if not company and 'company' not in serializer.validated_data:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"company": "User is not associated with any active company."})
+        if company:
+            serializer.save(company=company)
+        else:
+            serializer.save()
+
 
 
 # ==========================================================
@@ -220,12 +232,14 @@ class DepartmentRetrieveUpdateDestroyAPIView(
             .order_by("department_name")
         )
 
+        company = get_user_company(self.request.user)
+        if company:
+            return queryset.filter(company=company)
+
         if self.request.user.is_superuser:
             return queryset
 
-        return queryset.filter(
-            company=get_user_company(self.request.user)
-        )
+        return queryset.none()
 
     def get_permissions(self):
         """
@@ -297,12 +311,14 @@ class DesignationListCreateAPIView(
             .order_by("designation_name")
         )
 
+        company = get_user_company(self.request.user)
+        if company:
+            return queryset.filter(company=company)
+
         if self.request.user.is_superuser:
             return queryset
 
-        return queryset.filter(
-            company=get_user_company(self.request.user)
-        )
+        return queryset.none()
 
     def get_permissions(self):
 
@@ -330,10 +346,15 @@ class DesignationListCreateAPIView(
         the client to send it.
         """
 
-        company = getattr(self.request.user, "company", None)
-        if company is None and hasattr(self.request.user, "employee_profile"):
-            company = self.request.user.employee_profile.company
-        serializer.save(company=company)
+        company = get_user_company(self.request.user)
+        if not company and 'company' not in serializer.validated_data:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"company": "User is not associated with any active company."})
+        if company:
+            serializer.save(company=company)
+        else:
+            serializer.save()
+
 
 
 # ==========================================================
@@ -358,12 +379,14 @@ class DesignationRetrieveUpdateDestroyAPIView(
             .order_by("designation_name")
         )
 
+        company = get_user_company(self.request.user)
+        if company:
+            return queryset.filter(company=company)
+
         if self.request.user.is_superuser:
             return queryset
 
-        return queryset.filter(
-            company=get_user_company(self.request.user)
-        )
+        return queryset.none()
 
     def get_permissions(self):
 
@@ -455,12 +478,38 @@ class EmployeeListCreateAPIView(
         employee_id is auto-generated in the model.
         """
 
-        if self.request.user.is_superuser:
-            serializer.save()
+        company = get_user_company(self.request.user)
+        if 'company' in serializer.validated_data:
+            emp = serializer.save()
+            target_company = serializer.validated_data['company']
+        elif company:
+            emp = serializer.save(company=company)
+            target_company = company
         else:
-            serializer.save(
-                company=get_user_company(self.request.user)
-            )
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"company": "User is not associated with any active company."})
+
+        # Auto-initialize leave balances for the newly created employee
+        try:
+            from leave_management.models import LeaveType, LeaveBalance
+            from django.utils import timezone
+            from django.db.models import Q
+            current_year = timezone.now().year
+            for lt in LeaveType.objects.filter(Q(company=target_company) | Q(company__isnull=True), is_active=True):
+                LeaveBalance.objects.get_or_create(
+                    employee=emp,
+                    leave_type=lt,
+                    company=target_company,
+                    year=current_year,
+                    defaults={
+                        "allocated_days": lt.max_days_per_year,
+                        "used_days": 0,
+                        "remaining_days": lt.max_days_per_year,
+                    }
+                )
+        except Exception:
+            pass
+
 
 
 # ==========================================================
@@ -573,13 +622,14 @@ class EmployeeAddressListCreateAPIView(
             )
         )
 
+        company = get_user_company(self.request.user)
+        if company:
+            return queryset.filter(employee__company=company)
+
         if self.request.user.is_superuser:
             return queryset
 
-        return queryset.filter(
-            employee__company=
-            self.request.user.employee_profile.company
-        )
+        return queryset.none()
 
     def get_permissions(self):
 
@@ -637,13 +687,14 @@ class EmployeeAddressRetrieveUpdateDestroyAPIView(
             )
         )
 
+        company = get_user_company(self.request.user)
+        if company:
+            return queryset.filter(employee__company=company)
+
         if self.request.user.is_superuser:
             return queryset
 
-        return queryset.filter(
-            employee__company=
-            self.request.user.employee_profile.company
-        )
+        return queryset.none()
 
     def get_permissions(self):
 
@@ -732,13 +783,14 @@ class EmergencyContactListCreateAPIView(
             )
         )
 
+        company = get_user_company(self.request.user)
+        if company:
+            return queryset.filter(employee__company=company)
+
         if self.request.user.is_superuser:
             return queryset
 
-        return queryset.filter(
-            employee__company=
-            self.request.user.employee_profile.company
-        )
+        return queryset.none()
 
     def get_permissions(self):
 
@@ -796,13 +848,14 @@ class EmergencyContactRetrieveUpdateDestroyAPIView(
             )
         )
 
+        company = get_user_company(self.request.user)
+        if company:
+            return queryset.filter(employee__company=company)
+
         if self.request.user.is_superuser:
             return queryset
 
-        return queryset.filter(
-            employee__company=
-            self.request.user.employee_profile.company
-        )
+        return queryset.none()
 
     def get_permissions(self):
 
@@ -890,13 +943,14 @@ class EmployeeBankDetailListCreateAPIView(
             )
         )
 
+        company = get_user_company(self.request.user)
+        if company:
+            return queryset.filter(employee__company=company)
+
         if self.request.user.is_superuser:
             return queryset
 
-        return queryset.filter(
-            employee__company=
-            self.request.user.employee_profile.company
-        )
+        return queryset.none()
 
     def get_permissions(self):
 
@@ -954,13 +1008,14 @@ class EmployeeBankDetailRetrieveUpdateDestroyAPIView(
             )
         )
 
+        company = get_user_company(self.request.user)
+        if company:
+            return queryset.filter(employee__company=company)
+
         if self.request.user.is_superuser:
             return queryset
 
-        return queryset.filter(
-            employee__company=
-            self.request.user.employee_profile.company
-        )
+        return queryset.none()
 
     def get_permissions(self):
 
@@ -1052,13 +1107,14 @@ class EmployeeDocumentListCreateAPIView(
             )
         )
 
+        company = get_user_company(self.request.user)
+        if company:
+            return queryset.filter(employee__company=company)
+
         if self.request.user.is_superuser:
             return queryset
 
-        return queryset.filter(
-            employee__company=
-            self.request.user.employee_profile.company
-        )
+        return queryset.none()
 
     def get_permissions(self):
 
@@ -1121,13 +1177,14 @@ class EmployeeDocumentRetrieveUpdateDestroyAPIView(
             )
         )
 
+        company = get_user_company(self.request.user)
+        if company:
+            return queryset.filter(employee__company=company)
+
         if self.request.user.is_superuser:
             return queryset
 
-        return queryset.filter(
-            employee__company=
-            self.request.user.employee_profile.company
-        )
+        return queryset.none()
 
     def get_permissions(self):
 
@@ -1204,12 +1261,14 @@ class ShiftListCreateAPIView(
             .order_by("shift_name")
         )
 
+        company = get_user_company(self.request.user)
+        if company:
+            return queryset.filter(company=company)
+
         if self.request.user.is_superuser:
             return queryset
 
-        return queryset.filter(
-            company=get_user_company(self.request.user)
-        )
+        return queryset.none()
 
     def get_permissions(self):
 
@@ -1236,10 +1295,15 @@ class ShiftListCreateAPIView(
         self,
         serializer,
     ):
-        company = getattr(self.request.user, "company", None)
-        if company is None and hasattr(self.request.user, "employee_profile"):
-            company = self.request.user.employee_profile.company
-        serializer.save(company=company)
+        company = get_user_company(self.request.user)
+        if not company and 'company' not in serializer.validated_data:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"company": "User is not associated with any active company."})
+        if company:
+            serializer.save(company=company)
+        else:
+            serializer.save()
+
 
 
 # ==========================================================
@@ -1264,12 +1328,14 @@ class ShiftRetrieveUpdateDestroyAPIView(
             .filter(is_active=True)
         )
 
+        company = get_user_company(self.request.user)
+        if company:
+            return queryset.filter(company=company)
+
         if self.request.user.is_superuser:
             return queryset
 
-        return queryset.filter(
-            company=get_user_company(self.request.user)
-        )
+        return queryset.none()
 
     def get_permissions(self):
 

@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from payroll.models import Payslip
+from core.utils import get_user_company
 
 from .models import Payment
 from .serializers import (
@@ -40,10 +41,11 @@ class PaymentCreateAPIView(APIView):
         payslip = get_object_or_404(
             Payslip,
             pk=serializer.validated_data["payslip"],
+            company=get_user_company(request.user),
         )
 
         service = PaymentService(
-            company=request.user.employee_profile.company,
+            company=get_user_company(request.user),
         )
 
         payment = service.create_payment(
@@ -75,7 +77,7 @@ class PaymentListAPIView(APIView):
         payments = (
             Payment.objects
             .filter(
-                company=request.user.employee_profile.company,
+                company=get_user_company(request.user),
             )
             .order_by("-created_at")
         )
@@ -105,7 +107,7 @@ class PaymentDetailAPIView(APIView):
         payment = get_object_or_404(
             Payment,
             pk=payment_id,
-            company=request.user.employee_profile.company,
+            company=get_user_company(request.user),
         )
 
         serializer = PaymentSerializer(
@@ -140,11 +142,11 @@ class PaymentMarkProcessingAPIView(APIView):
         payment = get_object_or_404(
             Payment,
             pk=payment_id,
-            company=request.user.employee_profile.company,
+            company=get_user_company(request.user),
         )
 
         service = PaymentService(
-            company=request.user.employee_profile.company,
+            company=get_user_company(request.user),
         )
 
         payment = service.mark_processing(
@@ -183,11 +185,11 @@ class PaymentMarkPaidAPIView(APIView):
         payment = get_object_or_404(
             Payment,
             pk=payment_id,
-            company=request.user.employee_profile.company,
+            company=get_user_company(request.user),
         )
 
         service = PaymentService(
-            company=request.user.employee_profile.company,
+            company=get_user_company(request.user),
         )
 
         payment = service.mark_paid(
@@ -242,11 +244,11 @@ class PaymentMarkFailedAPIView(APIView):
         payment = get_object_or_404(
             Payment,
             pk=payment_id,
-            company=request.user.employee_profile.company,
+            company=get_user_company(request.user),
         )
 
         service = PaymentService(
-            company=request.user.employee_profile.company,
+            company=get_user_company(request.user),
         )
 
         payment = service.mark_failed(
@@ -290,11 +292,11 @@ class PaymentCancelAPIView(APIView):
         payment = get_object_or_404(
             Payment,
             pk=payment_id,
-            company=request.user.employee_profile.company,
+            company=get_user_company(request.user),
         )
 
         service = PaymentService(
-            company=request.user.employee_profile.company,
+            company=get_user_company(request.user),
         )
 
         payment = service.cancel_payment(

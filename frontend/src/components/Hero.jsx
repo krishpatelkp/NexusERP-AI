@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { FadeIn } from './animations';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import { api } from '../services/api';
@@ -12,11 +13,11 @@ export default function Hero() {
     useEffect(() => {
         async function loadLiveBackendData() {
             try {
-                await api.autoLogin();
                 const [employees, dash] = await Promise.all([
                     api.getEmployees().catch(() => []),
                     api.getAttendanceDashboard().catch(() => null),
                 ]);
+
                 if (employees || dash) {
                     setMetrics({
                         totalEmployees: String(employees.length || 105),
@@ -65,14 +66,15 @@ export default function Hero() {
 
       <FadeIn delay={300}>
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', justifyContent: 'center' }}>
-          <a href="#explorer" className="btn-primary">
+          <Link to="/register" className="btn-primary" style={{ textDecoration: 'none' }}>
             Get Started <ArrowRight size={16}/>
-          </a>
+          </Link>
           <a href="#features" className="btn-secondary">
             See What's Included
           </a>
         </div>
       </FadeIn>
+
 
       {/* Dashboard Preview */}
       <FadeIn delay={500}>

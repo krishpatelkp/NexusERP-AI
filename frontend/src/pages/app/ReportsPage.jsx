@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
-import { useAuth } from '../../context/AuthContext';
 import { Users, Clock, CalendarDays, Wallet, Package, CreditCard, ArrowRight, AlertCircle } from 'lucide-react';
 export default function ReportsPage() {
-    const { isAdmin } = useAuth();
     const [selectedReport, setSelectedReport] = useState('employee');
     const [reportData, setReportData] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -207,7 +205,7 @@ export default function ReportsPage() {
                 <thead>
                   <tr style={{ borderBottom: '2px solid #000000', color: '#767676', textTransform: 'uppercase', fontSize: 11 }}>
                     <th style={{ padding: '10px' }}>Emp ID</th>
-                    <th style={{ padding: '10px' }}>Name</th>
+                    <th style={{ padding: '10px' }}>Full Name</th>
                     <th style={{ padding: '10px' }}>Email</th>
                     <th style={{ padding: '10px' }}>Department</th>
                     <th style={{ padding: '10px' }}>Designation</th>
@@ -221,10 +219,17 @@ export default function ReportsPage() {
                         {emp.first_name ? `${emp.first_name} ${emp.last_name || ''}` : emp.username}
                       </td>
                       <td style={{ padding: '12px 10px', color: '#555' }}>{emp.email}</td>
-                      <td style={{ padding: '12px 10px', color: '#555' }}>{emp.department_name || emp.department || 'Engineering'}</td>
-                      <td style={{ padding: '12px 10px', color: '#555' }}>{emp.designation_name || emp.designation || 'Software Engineer'}</td>
+                      <td style={{ padding: '12px 10px', color: '#555' }}>{emp.department_name || emp.department || '—'}</td>
+                      <td style={{ padding: '12px 10px', color: '#555' }}>{emp.designation_name || emp.designation || '—'}</td>
                       <td style={{ padding: '12px 10px' }}>{renderStatusBadge(emp.is_active !== false ? 'Active' : 'Resigned')}</td>
                     </tr>))}
+                  {(!reportData?.list || reportData.list.length === 0) && (
+                    <tr>
+                      <td colSpan={6} style={{ padding: 32, textAlign: 'center', color: '#767676' }}>
+                        No employee records found for this workspace.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>)}
 
@@ -242,12 +247,19 @@ export default function ReportsPage() {
                 <tbody>
                   {(reportData?.list || []).map((r, i) => (<tr key={r.id || i} style={{ borderBottom: '1px solid #E6E6E6' }}>
                       <td style={{ padding: '12px 10px', fontWeight: 700, color: '#000' }}>{r.employee_name || `Employee #${r.employee}`}</td>
-                      <td style={{ padding: '12px 10px', color: '#555' }}>{r.date || new Date().toISOString().split('T')[0]}</td>
-                      <td style={{ padding: '12px 10px', color: '#137333', fontWeight: 600 }}>{r.check_in || '09:00 AM'}</td>
-                      <td style={{ padding: '12px 10px', color: '#555' }}>{r.check_out || '06:00 PM'}</td>
-                      <td style={{ padding: '12px 10px', fontWeight: 600 }}>{((r.working_minutes || 480) / 60).toFixed(1)} hrs</td>
+                      <td style={{ padding: '12px 10px', color: '#555' }}>{r.date || '—'}</td>
+                      <td style={{ padding: '12px 10px', color: '#137333', fontWeight: 600 }}>{r.check_in || '—'}</td>
+                      <td style={{ padding: '12px 10px', color: '#555' }}>{r.check_out || '—'}</td>
+                      <td style={{ padding: '12px 10px', fontWeight: 600 }}>{((r.working_minutes || 0) / 60).toFixed(1)} hrs</td>
                       <td style={{ padding: '12px 10px' }}>{renderStatusBadge(r.status || 'PRESENT')}</td>
                     </tr>))}
+                  {(!reportData?.list || reportData.list.length === 0) && (
+                    <tr>
+                      <td colSpan={6} style={{ padding: 32, textAlign: 'center', color: '#767676' }}>
+                        No attendance records logged for this period.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>)}
 
@@ -265,12 +277,19 @@ export default function ReportsPage() {
                 <tbody>
                   {(reportData?.list || []).map((l, i) => (<tr key={l.id || i} style={{ borderBottom: '1px solid #E6E6E6' }}>
                       <td style={{ padding: '12px 10px', fontWeight: 700, color: '#000' }}>{l.employee_name || `Employee #${l.employee}`}</td>
-                      <td style={{ padding: '12px 10px', color: '#555' }}>{l.leave_type_name || l.leave_type || 'Casual Leave'}</td>
+                      <td style={{ padding: '12px 10px', color: '#555' }}>{l.leave_type_name || l.leave_type || '—'}</td>
                       <td style={{ padding: '12px 10px', color: '#555' }}>{l.start_date}</td>
                       <td style={{ padding: '12px 10px', color: '#555' }}>{l.end_date}</td>
                       <td style={{ padding: '12px 10px', color: '#555' }}>{l.reason || 'N/A'}</td>
                       <td style={{ padding: '12px 10px' }}>{renderStatusBadge(l.status)}</td>
                     </tr>))}
+                  {(!reportData?.list || reportData.list.length === 0) && (
+                    <tr>
+                      <td colSpan={6} style={{ padding: 32, textAlign: 'center', color: '#767676' }}>
+                        No leave applications recorded in this ledger.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>)}
 
@@ -287,13 +306,20 @@ export default function ReportsPage() {
                 </thead>
                 <tbody>
                   {(reportData?.list || []).map((p, i) => (<tr key={p.id || i} style={{ borderBottom: '1px solid #E6E6E6' }}>
-                      <td style={{ padding: '12px 10px', fontWeight: 700, color: '#000' }}>{p.month || 'July'} {p.year || 2026}</td>
-                      <td style={{ padding: '12px 10px' }}>₹{Number(p.basic_salary || 60000).toLocaleString()}</td>
-                      <td style={{ padding: '12px 10px' }}>₹{Number(p.allowances || 25000).toLocaleString()}</td>
+                      <td style={{ padding: '12px 10px', fontWeight: 700, color: '#000' }}>{p.month ? `${p.month} ${p.year || ''}` : '—'}</td>
+                      <td style={{ padding: '12px 10px' }}>₹{Number(p.basic_salary || 0).toLocaleString()}</td>
+                      <td style={{ padding: '12px 10px' }}>₹{Number(p.allowances || 0).toLocaleString()}</td>
                       <td style={{ padding: '12px 10px', color: '#C5221F' }}>₹{Number(p.deductions || 0).toLocaleString()}</td>
-                      <td style={{ padding: '12px 10px', fontWeight: 700 }}>₹{Number(p.net_salary || 85000).toLocaleString()}</td>
-                      <td style={{ padding: '12px 10px' }}>{renderStatusBadge('PAID')}</td>
+                      <td style={{ padding: '12px 10px', fontWeight: 700 }}>₹{Number(p.net_salary || 0).toLocaleString()}</td>
+                      <td style={{ padding: '12px 10px' }}>{renderStatusBadge(p.status || 'PAID')}</td>
                     </tr>))}
+                  {(!reportData?.list || reportData.list.length === 0) && (
+                    <tr>
+                      <td colSpan={6} style={{ padding: 32, textAlign: 'center', color: '#767676' }}>
+                        No payroll disbursement records generated yet.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>)}
 
@@ -310,13 +336,20 @@ export default function ReportsPage() {
                 </thead>
                 <tbody>
                   {(reportData?.list || []).map((a, i) => (<tr key={a.id || i} style={{ borderBottom: '1px solid #E6E6E6' }}>
-                      <td style={{ padding: '12px 10px', fontWeight: 700, color: '#000' }}>{a.asset_tag || `AST-${a.id || i + 1001}`}</td>
-                      <td style={{ padding: '12px 10px', fontWeight: 600 }}>{a.name || 'MacBook Pro 16" M3 Max'}</td>
-                      <td style={{ padding: '12px 10px', color: '#555' }}>{a.category_name || a.category || 'Laptop'}</td>
-                      <td style={{ padding: '12px 10px' }}>{a.assigned_to_name || 'Krish Patel'}</td>
-                      <td style={{ padding: '12px 10px', color: '#555' }}>{a.vendor || 'Apple Business'}</td>
-                      <td style={{ padding: '12px 10px' }}>{renderStatusBadge(a.status || 'ASSIGNED')}</td>
+                      <td style={{ padding: '12px 10px', fontWeight: 700, color: '#000' }}>{a.asset_tag || `AST-${a.id}`}</td>
+                      <td style={{ padding: '12px 10px', fontWeight: 600 }}>{a.name || '—'}</td>
+                      <td style={{ padding: '12px 10px', color: '#555' }}>{a.category_name || a.category || '—'}</td>
+                      <td style={{ padding: '12px 10px' }}>{a.assigned_to_name || 'Unassigned'}</td>
+                      <td style={{ padding: '12px 10px', color: '#555' }}>{a.vendor_name || a.vendor || '—'}</td>
+                      <td style={{ padding: '12px 10px' }}>{renderStatusBadge(a.status || 'AVAILABLE')}</td>
                     </tr>))}
+                  {(!reportData?.list || reportData.list.length === 0) && (
+                    <tr>
+                      <td colSpan={6} style={{ padding: 32, textAlign: 'center', color: '#767676' }}>
+                        No hardware assets or devices in this registry.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>)}
 
@@ -332,12 +365,19 @@ export default function ReportsPage() {
                 </thead>
                 <tbody>
                   {(reportData?.list || []).map((pm, i) => (<tr key={pm.id || i} style={{ borderBottom: '1px solid #E6E6E6' }}>
-                      <td style={{ padding: '12px 10px', fontWeight: 700, color: '#000' }}>{pm.payment_reference || `PAY-2026-${pm.id || i + 1}`}</td>
+                      <td style={{ padding: '12px 10px', fontWeight: 700, color: '#000' }}>{pm.payment_number || pm.bank_reference_number || `PAY-${pm.id}`}</td>
                       <td style={{ padding: '12px 10px', color: '#555' }}>{pm.payment_method || 'Bank Transfer'}</td>
-                      <td style={{ padding: '12px 10px', fontWeight: 700 }}>₹{Number(pm.amount || 85000).toLocaleString()}</td>
-                      <td style={{ padding: '12px 10px', color: '#555' }}>{pm.processed_at || new Date().toISOString().split('T')[0]}</td>
-                      <td style={{ padding: '12px 10px' }}>{renderStatusBadge(pm.status || 'SUCCESS')}</td>
+                      <td style={{ padding: '12px 10px', fontWeight: 700 }}>₹{Number(pm.amount || 0).toLocaleString()}</td>
+                      <td style={{ padding: '12px 10px', color: '#555' }}>{pm.payment_date || pm.processed_at?.split('T')[0] || '—'}</td>
+                      <td style={{ padding: '12px 10px' }}>{renderStatusBadge(pm.status || 'PAID')}</td>
                     </tr>))}
+                  {(!reportData?.list || reportData.list.length === 0) && (
+                    <tr>
+                      <td colSpan={5} style={{ padding: 32, textAlign: 'center', color: '#767676' }}>
+                        No payment transfers found in this ledger.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>)}
           </div>)}

@@ -3,18 +3,18 @@ import { Link } from 'react-router-dom';
 import { api } from '../../services/api';
 import { ArrowRight, Check, X } from 'lucide-react';
 export default function AdminDashboardPage() {
-    const [empSummary, setEmpSummary] = useState({ total_employees: 105, active_employees: 102 });
+    const [empSummary, setEmpSummary] = useState({ total_employees: 0, active_employees: 0 });
     const [attDashboard, setAttDashboard] = useState({
-        attendance_percentage: 94.2,
-        present_count: 98,
-        absent_count: 3,
-        late_count: 4,
-        on_leave_count: 2,
+        attendance_percentage: 0,
+        present_count: 0,
+        absent_count: 0,
+        late_count: 0,
+        on_leave_count: 0,
         not_marked_count: 0,
-        total_employees: 105,
+        total_employees: 0,
     });
-    const [leaveSummary, setLeaveSummary] = useState({ pending: 3 });
-    const [payrollSummary, setPayrollSummary] = useState({ total_net: 85000 });
+    const [leaveSummary, setLeaveSummary] = useState({ pending: 0 });
+    const [payrollSummary, setPayrollSummary] = useState({ total_net: 0 });
     const [employees, setEmployees] = useState([]);
     const [pendingLeaves, setPendingLeaves] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -97,7 +97,8 @@ export default function AdminDashboardPage() {
         const diff = Math.ceil((e.getTime() - s.getTime()) / (1000 * 3600 * 24)) + 1;
         return diff > 0 ? diff : 1;
     };
-    const totalEmp = attDashboard.total_employees || empSummary.total_employees || 105;
+    const totalEmp = empSummary.total ?? empSummary.total_employees ?? attDashboard.total_employees ?? employees.length ?? 0;
+    const activeEmp = empSummary.active ?? empSummary.active_employees ?? employees.length ?? 0;
     return (<div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
       {/* SECTION 1 — KPI Summary Row (4 cards, no border radius) */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20 }}>
@@ -107,10 +108,10 @@ export default function AdminDashboardPage() {
             Total Employees
           </div>
           <div style={{ fontSize: 32, fontWeight: 700, color: '#000000', lineHeight: 1, marginBottom: 8, letterSpacing: '-0.02em' }}>
-            {empSummary.total_employees || 105}
+            {totalEmp}
           </div>
           <div style={{ fontSize: 13, color: '#137333', fontWeight: 600 }}>
-            {empSummary.active_employees || 102} Active Personnel
+            {activeEmp} Active Personnel
           </div>
         </div>
 
@@ -120,10 +121,10 @@ export default function AdminDashboardPage() {
             Today's Attendance
           </div>
           <div style={{ fontSize: 32, fontWeight: 700, color: '#000000', lineHeight: 1, marginBottom: 8, letterSpacing: '-0.02em' }}>
-            {attDashboard.attendance_percentage ? `${attDashboard.attendance_percentage}%` : '94.2%'}
+            {attDashboard.attendance_percentage != null ? `${attDashboard.attendance_percentage}%` : '0%'}
           </div>
           <div style={{ fontSize: 13, color: '#767676', fontWeight: 500 }}>
-            {attDashboard.present_count || 98} / {totalEmp} Present Today
+            {attDashboard.present_count ?? 0} / {totalEmp} Present Today
           </div>
         </div>
 
@@ -133,9 +134,9 @@ export default function AdminDashboardPage() {
             Pending Leave Requests
           </div>
           <div style={{ fontSize: 32, fontWeight: 700, color: '#000000', lineHeight: 1, marginBottom: 8, letterSpacing: '-0.02em' }}>
-            {leaveSummary.pending ?? pendingLeaves.length}
+            {leaveSummary.pending ?? pendingLeaves.length ?? 0}
           </div>
-          <div style={{ fontSize: 13, color: leaveSummary.pending > 0 ? '#B06000' : '#767676', fontWeight: 600 }}>
+          <div style={{ fontSize: 13, color: (leaveSummary.pending || pendingLeaves.length) > 0 ? '#B06000' : '#767676', fontWeight: 600 }}>
             Requires Admin Review
           </div>
         </div>
@@ -146,13 +147,14 @@ export default function AdminDashboardPage() {
             Payroll Outflow
           </div>
           <div style={{ fontSize: 32, fontWeight: 700, color: '#000000', lineHeight: 1, marginBottom: 8, letterSpacing: '-0.02em' }}>
-            ₹{(payrollSummary.total_net || 85000).toLocaleString()}
+            ₹{(payrollSummary.total_net ?? 0).toLocaleString()}
           </div>
           <div style={{ fontSize: 13, color: '#137333', fontWeight: 600 }}>
             Current Month Cycle
           </div>
         </div>
       </div>
+
 
       {/* SECTION 2 — Two Column Grid (Left 2/3, Right 1/3) */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24 }} className="grid-cols-1 lg:grid-cols-[2fr_1fr]">
@@ -187,8 +189,8 @@ export default function AdminDashboardPage() {
                     <td style={{ padding: '12px 12px', fontWeight: 600, color: '#000000' }}>
                       {emp.first_name ? `${emp.first_name} ${emp.last_name || ''}` : emp.username || `Employee #${emp.id}`}
                     </td>
-                    <td style={{ padding: '12px 12px', color: '#555' }}>{emp.department_name || emp.department || 'Engineering'}</td>
-                    <td style={{ padding: '12px 12px', color: '#555' }}>{emp.designation_name || emp.designation || 'Software Engineer'}</td>
+                    <td style={{ padding: '12px 12px', color: '#555' }}>{emp.department_name || emp.department || '—'}</td>
+                    <td style={{ padding: '12px 12px', color: '#555' }}>{emp.designation_name || emp.designation || '—'}</td>
                     <td style={{ padding: '12px 12px' }}>
                       {renderStatusBadge(emp.status || (emp.is_active !== false ? 'Active' : 'Resigned'))}
                     </td>
@@ -211,10 +213,10 @@ export default function AdminDashboardPage() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {[
-            { label: 'Present', count: attDashboard.present_count ?? 98 },
-            { label: 'Absent', count: attDashboard.absent_count ?? 3 },
-            { label: 'Late', count: attDashboard.late_count ?? 4 },
-            { label: 'On Leave', count: attDashboard.on_leave_count ?? 2 },
+            { label: 'Present', count: attDashboard.present_count ?? 0 },
+            { label: 'Absent', count: attDashboard.absent_count ?? 0 },
+            { label: 'Late', count: attDashboard.late_count ?? 0 },
+            { label: 'On Leave', count: attDashboard.on_leave_count ?? 0 },
             { label: 'Not Marked', count: attDashboard.not_marked_count ?? 0 },
         ].map((item) => {
             const pct = totalEmp > 0 ? Math.min(100, Math.round((item.count / totalEmp) * 100)) : 0;
@@ -295,11 +297,19 @@ export default function AdminDashboardPage() {
                     </td>
                   </tr>);
         })}
-              {pendingLeaves.length === 0 && (<tr>
+              {loading ? (
+                <tr>
+                  <td colSpan={6} style={{ padding: 24, textAlign: 'center', color: '#767676' }}>
+                    Loading pending requests...
+                  </td>
+                </tr>
+              ) : pendingLeaves.length === 0 && (
+                <tr>
                   <td colSpan={6} style={{ padding: 24, textAlign: 'center', color: '#767676' }}>
                     No pending leave requests requiring approval.
                   </td>
-                </tr>)}
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

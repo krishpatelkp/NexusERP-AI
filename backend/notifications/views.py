@@ -2,6 +2,7 @@ from rest_framework import status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.utils import get_user_company
 from .serializers import NotificationSerializer, UnreadCountSerializer
 from .services import NotificationService
 
@@ -16,9 +17,7 @@ class NotificationListAPIView(APIView):
 
     def get(self, request, *args, **kwargs):
         unread_only = request.query_params.get("unread_only", "").lower() in ("true", "1")
-        company = getattr(request.user, "company", None)
-        if not company and hasattr(request.user, "employee_profile"):
-            company = request.user.employee_profile.company
+        company = get_user_company(request.user)
 
         if not company:
             return Response({"detail": "User has no company associated."}, status=status.HTTP_400_BAD_REQUEST)
@@ -37,9 +36,7 @@ class UnreadNotificationCountAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        company = getattr(request.user, "company", None)
-        if not company and hasattr(request.user, "employee_profile"):
-            company = request.user.employee_profile.company
+        company = get_user_company(request.user)
 
         if not company:
             return Response({"detail": "User has no company associated."}, status=status.HTTP_400_BAD_REQUEST)
@@ -57,9 +54,7 @@ class MarkNotificationReadAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def patch(self, request, pk, *args, **kwargs):
-        company = getattr(request.user, "company", None)
-        if not company and hasattr(request.user, "employee_profile"):
-            company = request.user.employee_profile.company
+        company = get_user_company(request.user)
 
         if not company:
             return Response({"detail": "User has no company associated."}, status=status.HTTP_400_BAD_REQUEST)
@@ -82,9 +77,7 @@ class MarkAllNotificationsReadAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        company = getattr(request.user, "company", None)
-        if not company and hasattr(request.user, "employee_profile"):
-            company = request.user.employee_profile.company
+        company = get_user_company(request.user)
 
         if not company:
             return Response({"detail": "User has no company associated."}, status=status.HTTP_400_BAD_REQUEST)

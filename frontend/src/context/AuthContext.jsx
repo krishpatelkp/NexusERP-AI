@@ -22,16 +22,8 @@ export const AuthProvider = ({ children }) => {
                 }
             }
             else {
-                // Auto attempt demo login to make dev session smooth
-                try {
-                    await api.autoLogin();
-                    const me = await api.getMe();
-                    setUser(me);
-                    setToken(api.getToken());
-                }
-                catch {
-                    setUser(null);
-                }
+                setUser(null);
+                setToken(null);
             }
             setIsLoading(false);
         }
@@ -53,6 +45,20 @@ export const AuthProvider = ({ children }) => {
             setToken(api.getToken());
             const me = res.user || (await api.getMe());
             setUser(me);
+            return me;
+        }
+        finally {
+            setIsLoading(false);
+        }
+    };
+    const register = async (payload) => {
+        setIsLoading(true);
+        try {
+            const res = await api.register(payload);
+            setToken(api.getToken());
+            const me = res.user || (await api.getMe());
+            setUser(me);
+            return me;
         }
         finally {
             setIsLoading(false);
@@ -69,11 +75,14 @@ export const AuthProvider = ({ children }) => {
             setIsLoading(false);
         }
     };
+
     // Role checks
+    const roleCode = (user?.role_code || user?.role?.role_code || '').toUpperCase();
     const roleName = (user?.role_name || user?.role?.role_name || '').toLowerCase();
     const isSuperuser = !!user?.is_superuser;
-    const isAdmin = isSuperuser || roleName === 'admin' || roleName === 'hr' || roleName === 'owner' || !user?.role_name;
-    const isEmployee = !isAdmin && roleName === 'employee';
+    const isStaff = !!user?.is_staff;
+    const isAdmin = isSuperuser || isStaff || roleCode === 'ADMIN' || roleCode === 'OWNER' || roleCode === 'HR' || roleName.includes('admin') || roleName.includes('hr') || roleName.includes('owner') || (!user?.role_name && !user?.role_code);
+    const isEmployee = !isAdmin;
     return (<AuthContext.Provider value={{
             user,
             token,
@@ -82,11 +91,13 @@ export const AuthProvider = ({ children }) => {
             isAdmin,
             isEmployee,
             login,
+            register,
             logout,
             refreshUser,
         }}>
       {children}
     </AuthContext.Provider>);
+
 };
 export const useAuth = () => {
     const context = useContext(AuthContext);

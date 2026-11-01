@@ -428,6 +428,20 @@ class EmployeeSerializer(serializers.ModelSerializer):
 
         return None
 
+    def to_internal_value(self, data):
+        if hasattr(data, "copy"):
+            data = data.copy()
+        elif isinstance(data, dict):
+            data = dict(data)
+        if isinstance(data, dict):
+            if "phone" in data and isinstance(data["phone"], str):
+                import re
+                data["phone"] = re.sub(r"[\s\-\(\)]", "", data["phone"])
+            if "alternate_phone" in data and isinstance(data["alternate_phone"], str):
+                import re
+                data["alternate_phone"] = re.sub(r"[\s\-\(\)]", "", data["alternate_phone"])
+        return super().to_internal_value(data)
+
     # ──────────────────────────────────────
     # FIELD VALIDATION
     # ──────────────────────────────────────
@@ -495,17 +509,19 @@ class EmployeeSerializer(serializers.ModelSerializer):
     
     def validate_phone(self, value):
         """
-        Remove extra spaces from phone number.
+        Remove extra spaces and formatting from phone number.
         """
-
-        return value.strip()
+        import re
+        return re.sub(r"[\s\-\(\)]", "", value)
     
     def validate_alternate_phone(self, value):
         """
-        Remove extra spaces from alternate phone.
+        Remove extra spaces and formatting from alternate phone.
         """
-
-        return value.strip()
+        if not value:
+            return value
+        import re
+        return re.sub(r"[\s\-\(\)]", "", value)
 
     def validate_basic_salary(self, value):
         """
@@ -545,15 +561,12 @@ class EmployeeSerializer(serializers.ModelSerializer):
         if self.instance:
             company = self.instance.company
 
-        elif request and request.user.is_superuser:
+        elif request and request.user.is_superuser and attrs.get("company"):
             company = attrs.get("company")
 
         else:
-            company = getattr(
-                request.user,
-                "company",
-                None,
-            )
+            from core.utils import get_user_company
+            company = get_user_company(request.user) if request else None
 
         if company is None:
             return attrs

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { FadeIn } from './animations';
 import { ArrowRight } from 'lucide-react';
 export default function CTA() {
@@ -21,9 +22,9 @@ export default function CTA() {
 
         <FadeIn delay={200}>
           <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a href="#explorer" className="btn-primary">
+            <Link to="/register" className="btn-primary" style={{ textDecoration: 'none' }}>
               Get Started — It's Free <ArrowRight size={16}/>
-            </a>
+            </Link>
             <a href="#features" className="btn-secondary">
               Explore Features
             </a>
@@ -32,3 +33,4 @@ export default function CTA() {
       </div>
     </section>);
 }
+

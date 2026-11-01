@@ -1,36 +1,54 @@
 # Virtual Environment
 venv/
+.venv/
+env/
 
 # Python
 __pycache__/
 *.py[cod]
 *.pyo
+*.pyd
 
 # Django
 *.log
 db.sqlite3
+db.sqlite3-journal
 
-# Environment Variables
+# Environment Variables & Secrets
 .env
+.env.*
+!.env.example
 backend/.env
+backend/.env.*
+!backend/.env.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
 
-# VS Code
-.vscode/
+# Antigravity IDE and Local Agent State
+.agent/
+.agents/
+.gemini/
+.gsd/
 
-# Media
+# Media & Static Files
 media/
 backend/media/
-
-# Static Files
 staticfiles/
 
-# Node
+# Node & Frontend Build
 node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
 
-# OS Files
+# IDE & OS Files
+.vscode/
+.idea/
 .DS_Store
 Thumbs.db
 
+# Archives
 *.zip
 *.rar
 *.7z

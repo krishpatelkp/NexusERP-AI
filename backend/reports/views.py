@@ -55,6 +55,8 @@ from .services import (
 
 from attendance.reports import AttendanceReportService as DetailedAttendanceReportService
 
+from core.utils import get_user_company
+
 # ==========================================================
 # BASE REPORT API VIEW
 # ==========================================================
@@ -73,7 +75,7 @@ class BaseReportAPIView(APIView):
             )
 
         return self.service_class(
-            company=self.request.user.employee_profile.company,
+            company=get_user_company(self.request.user),
         )
 
     def get_date(

@@ -23,19 +23,22 @@ class Company(models.Model):
     )
 
     website = models.URLField(
-        blank=True
+        blank=True,
+        null=True,
     )
 
     gst_number = models.CharField(
         max_length=15,
         unique=True,
-        blank=True
+        null=True,
+        blank=True,
     )
 
     pan_number = models.CharField(
         max_length=10,
         unique=True,
-        blank=True
+        null=True,
+        blank=True,
     )
 
     address = models.TextField()
@@ -73,6 +76,15 @@ class Company(models.Model):
     updated_at = models.DateTimeField(
         auto_now=True
     )
+
+    def save(self, *args, **kwargs):
+        if not self.gst_number:
+            self.gst_number = None
+        if not self.pan_number:
+            self.pan_number = None
+        if not self.website:
+            self.website = None
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.company_name

@@ -13,11 +13,13 @@ Responsibilities:
 ==========================================================
 """
 
+from datetime import datetime, date
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from django.http import HttpResponse
 
+from core.utils import get_user_company
 from .serializers import (
     ImportPreviewRequestSerializer,
     ImportConfirmRequestSerializer,
@@ -38,7 +40,6 @@ class ImportPreviewAPIView(APIView):
     """
     permission_classes = [permissions.IsAuthenticated]
     
-    # We must explicitly accept multipart/form-data
     from rest_framework.parsers import MultiPartParser, FormParser
     parser_classes = (MultiPartParser, FormParser)
 
@@ -50,8 +51,9 @@ class ImportPreviewAPIView(APIView):
         module = serializer.validated_data["module"]
         file = serializer.validated_data["file"]
 
+        company = get_user_company(request.user)
         try:
-            service = get_import_service(module, request.user.company, request.user)
+            service = get_import_service(module, company, request.user)
             result = service.preview(file)
             return Response(result, status=status.HTTP_200_OK)
         except DataExchangeError as e:
@@ -72,11 +74,11 @@ class ImportConfirmAPIView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         log_id = serializer.validated_data["log_id"]
+        company = get_user_company(request.user)
 
         try:
-            # Re-fetch the module from the log to instatiate the right service
-            log = ImportLog.objects.get(id=log_id, company=request.user.company)
-            service = get_import_service(log.module, request.user.company, request.user)
+            log = ImportLog.objects.get(id=log_id, company=company)
+            service = get_import_service(log.module, company, request.user)
             result = service.confirm(log_id)
             return Response(result, status=status.HTTP_200_OK)
         except ImportLog.DoesNotExist:
@@ -94,8 +96,9 @@ class ImportCancelAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, log_id, *args, **kwargs):
+        company = get_user_company(request.user)
         try:
-            service = ImportCancelService(request.user.company, request.user)
+            service = ImportCancelService(company, request.user)
             result = service.cancel(log_id)
             return Response(result, status=status.HTTP_200_OK)
         except DataExchangeError as e:
@@ -132,7 +135,8 @@ class ImportHistoryAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        logs = ImportLog.objects.filter(company=request.user.company).order_by("-started_at")[:50]
+        company = get_user_company(request.user)
+        logs = ImportLog.objects.filter(company=company).order_by("-started_at")[:50]
         serializer = ImportLogSerializer(logs, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -140,8 +144,6 @@ class ImportHistoryAPIView(APIView):
 class ExportAPIView(APIView):
     """
     Generate and download export.
-    Note: For production, large exports should be async via Celery.
-    Here we return it synchronously.
     """
     permission_classes = [permissions.IsAuthenticated]
 
@@ -152,10 +154,11 @@ class ExportAPIView(APIView):
 
         module = serializer.validated_data["module"]
         export_format = serializer.validated_data["format"]
+        company = get_user_company(request.user)
 
-        # 1. Get data by reusing report services (which are already company-isolated)
-        data = self._get_export_data(module, request)
-        if isinstance(data, Response):  # Handle errors returned from report services
+        # 1. Get data
+        data = self._get_export_data(module, request, company)
+        if isinstance(data, Response):
             return data
 
         columns = self._get_export_columns(module)
@@ -173,7 +176,7 @@ class ExportAPIView(APIView):
             from .models import ExportLog
             from .constants import ExportStatus
             ExportLog.objects.create(
-                company=request.user.company,
+                company=company,
                 exported_by=request.user,
                 module=module,
                 export_format=export_format,
@@ -186,18 +189,13 @@ class ExportAPIView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    def _get_export_data(self, module, request):
-        """Fetch data by calling the respective report service."""
+    def _get_export_data(self, module, request, company):
+        """Fetch data by calling the respective models/services."""
         from .constants import ExportModule
-        
-        # We construct a fake request context if needed, or pass kwargs.
-        # It's better to call the report service directly.
-        # Since report services are meant to return QuerySets or structured dicts,
-        # we serialize them dynamically.
         
         if module == ExportModule.EMPLOYEES:
             from employees.models import Employee
-            qs = Employee.objects.filter(company=request.user.company).select_related('department', 'designation')
+            qs = Employee.objects.filter(company=company).select_related('department', 'designation')
             return [
                 {
                     "employee_id": e.employee_id,
@@ -212,10 +210,9 @@ class ExportAPIView(APIView):
         
         elif module == ExportModule.ATTENDANCE:
             from attendance.models import Attendance
-            from datetime import date
             month = request.query_params.get("month", date.today().month)
             year = request.query_params.get("year", date.today().year)
-            qs = Attendance.objects.filter(employee__company=request.user.company, date__month=month, date__year=year).select_related("employee")
+            qs = Attendance.objects.filter(employee__company=company, date__month=month, date__year=year).select_related("employee")
             return [
                 {
                     "employee_id": a.employee.employee_id,
@@ -229,7 +226,7 @@ class ExportAPIView(APIView):
             
         elif module == ExportModule.INVENTORY:
             from inventory.models import Asset
-            qs = Asset.objects.filter(company=request.user.company).select_related('category')
+            qs = Asset.objects.filter(company=company).select_related('category')
             return [
                 {
                     "asset_tag": a.asset_tag,
@@ -240,7 +237,6 @@ class ExportAPIView(APIView):
                 } for a in qs
             ]
             
-        # Add others as needed
         return []
 
     def _get_export_columns(self, module):
@@ -252,5 +248,3 @@ class ExportAPIView(APIView):
         if module == ExportModule.INVENTORY:
             return ["asset_tag", "name", "category", "status", "condition"]
         return []
-
-from datetime import datetime

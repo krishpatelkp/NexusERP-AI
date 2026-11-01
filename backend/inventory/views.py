@@ -7,6 +7,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.utils import get_user_company
+
 from .models import (
     Asset,
     AssetAssignment,
@@ -38,13 +40,6 @@ from .pagination import InventoryPagination
 # ==========================================================
 
 def _raise_drf(exc):
-    """
-    InventoryService raises rest_framework.exceptions
-    .ValidationError directly (confirmed in services.py
-    imports), so in most cases nothing needs converting.
-    This helper exists only as a safety net in case a
-    plain string or Django-style error reaches here.
-    """
     if hasattr(exc, "detail"):
         raise exc
     raise DRFValidationError(detail=str(exc))
@@ -67,7 +62,7 @@ class AssetCategoryListAPIView(ListAPIView):
         return (
             AssetCategory.objects
             .filter(
-                company=self.request.user.employee_profile.company,
+                company=get_user_company(self.request.user),
                 is_active=True,
             )
             .order_by("name")
@@ -91,7 +86,7 @@ class VendorListAPIView(ListAPIView):
         return (
             Vendor.objects
             .filter(
-                company=self.request.user.employee_profile.company,
+                company=get_user_company(self.request.user),
                 is_active=True,
             )
             .order_by("name")
@@ -120,7 +115,7 @@ class AssetListAPIView(ListAPIView):
         queryset = (
             Asset.objects
             .filter(
-                company=self.request.user.employee_profile.company,
+                company=get_user_company(self.request.user),
                 is_active=True,
             )
             .select_related("category", "vendor")
@@ -152,7 +147,7 @@ class AssetDetailAPIView(RetrieveAPIView):
 
     def get_queryset(self):
         return Asset.objects.filter(
-            company=self.request.user.employee_profile.company,
+            company=get_user_company(self.request.user),
         )
 
 
@@ -173,7 +168,7 @@ class CreateAssetAPIView(APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        service = InventoryService(company=request.user.employee_profile.company)
+        service = InventoryService(company=get_user_company(request.user))
 
         try:
             asset = service.create_asset(
@@ -218,14 +213,14 @@ class AssignAssetAPIView(APIView):
         asset = get_object_or_404(
             Asset,
             pk=pk,
-            company=request.user.employee_profile.company,
+            company=get_user_company(request.user),
         )
 
         serializer = AssignAssetSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        service = InventoryService(company=request.user.employee_profile.company)
+        service = InventoryService(company=get_user_company(request.user))
 
         try:
             assignment = service.assign_asset(
@@ -261,14 +256,14 @@ class ReturnAssetAPIView(APIView):
         asset = get_object_or_404(
             Asset,
             pk=pk,
-            company=request.user.employee_profile.company,
+            company=get_user_company(request.user),
         )
 
         serializer = ReturnAssetSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        service = InventoryService(company=request.user.employee_profile.company)
+        service = InventoryService(company=get_user_company(request.user))
 
         try:
             assignment = service.return_asset(
@@ -303,14 +298,14 @@ class ScheduleMaintenanceAPIView(APIView):
         asset = get_object_or_404(
             Asset,
             pk=pk,
-            company=request.user.employee_profile.company,
+            company=get_user_company(request.user),
         )
 
         serializer = ScheduleMaintenanceSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        service = InventoryService(company=request.user.employee_profile.company)
+        service = InventoryService(company=get_user_company(request.user))
 
         try:
             maintenance = service.schedule_maintenance(
@@ -348,14 +343,14 @@ class CompleteMaintenanceAPIView(APIView):
         maintenance = get_object_or_404(
             AssetMaintenance,
             pk=pk,
-            company=request.user.employee_profile.company,
+            company=get_user_company(request.user),
         )
 
         serializer = CompleteMaintenanceSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        service = InventoryService(company=request.user.employee_profile.company)
+        service = InventoryService(company=get_user_company(request.user))
 
         try:
             maintenance = service.complete_maintenance(
@@ -390,14 +385,14 @@ class RetireAssetAPIView(APIView):
         asset = get_object_or_404(
             Asset,
             pk=pk,
-            company=request.user.employee_profile.company,
+            company=get_user_company(request.user),
         )
 
         serializer = RetireAssetSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        service = InventoryService(company=request.user.employee_profile.company)
+        service = InventoryService(company=get_user_company(request.user))
 
         try:
             asset = service.retire_asset(
@@ -435,7 +430,7 @@ class AssetAssignmentListAPIView(ListAPIView):
 
         queryset = (
             AssetAssignment.objects
-            .filter(company=self.request.user.employee_profile.company)
+            .filter(company=get_user_company(self.request.user))
             .select_related("asset", "employee")
             .order_by("-assigned_date")
         )
@@ -476,7 +471,7 @@ class AssetMaintenanceListAPIView(ListAPIView):
 
         queryset = (
             AssetMaintenance.objects
-            .filter(company=self.request.user.employee_profile.company)
+            .filter(company=get_user_company(self.request.user))
             .select_related("asset", "vendor")
             .order_by("-scheduled_date")
         )

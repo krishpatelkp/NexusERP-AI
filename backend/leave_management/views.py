@@ -16,6 +16,7 @@ from .models import (
     LeaveType,
 )
 from employees.models import Employee
+from core.utils import get_user_company
 
 from .serializers import (
     LeaveBalanceSerializer,
@@ -82,11 +83,14 @@ class LeaveRequestCreateAPIView(
             raise_exception=True,
         )
 
-        employee = getattr(request.user, "employee_profile", None) or Employee.objects.filter(is_active=True).first()
+        company = get_user_company(request.user)
+        employee = getattr(request.user, "employee_profile", None)
+        if not employee and company:
+            employee = Employee.objects.filter(company=company, is_active=True).first()
 
         if not employee:
             return Response(
-                {"error": "No active employee profile found to apply for leave."},
+                {"error": "No active employee profile found in this company to apply for leave."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -162,16 +166,18 @@ class LeaveRequestListAPIView(
             "approved_by",
         ).order_by("-created_at")
 
-        if is_admin_or_hr:
-            if user.is_superuser or not user.company:
-                return qs
-            return qs.filter(company=user.company)
+        company = get_user_company(user)
+        if company:
+            if is_admin_or_hr:
+                return qs.filter(company=company)
+            emp_profile = getattr(user, "employee_profile", None)
+            if emp_profile:
+                return qs.filter(employee=emp_profile, company=company)
+            return qs.none()
 
-        emp_profile = getattr(user, "employee_profile", None)
-        if emp_profile:
-            return qs.filter(employee=emp_profile)
-        if user.company:
-            return qs.filter(company=user.company)
+        if user.is_superuser:
+            return qs
+
         return qs.none()
     
 
@@ -208,14 +214,18 @@ class LeaveRequestRetrieveAPIView(
             "approved_by",
         )
 
-        if is_admin_or_hr:
-            if user.is_superuser or not user.company:
-                return qs
-            return qs.filter(company=user.company)
+        company = get_user_company(user)
+        if company:
+            if is_admin_or_hr:
+                return qs.filter(company=company)
+            emp_profile = getattr(user, "employee_profile", None)
+            if emp_profile:
+                return qs.filter(employee=emp_profile, company=company)
+            return qs.none()
 
-        emp_profile = getattr(user, "employee_profile", None)
-        if emp_profile:
-            return qs.filter(employee=emp_profile)
+        if user.is_superuser:
+            return qs
+
         return qs.none()
     
 
@@ -450,12 +460,13 @@ class LeaveTypeListAPIView(generics.ListAPIView):
     def get_queryset(self):
         from django.db.models import Q
         user = self.request.user
+        company = get_user_company(user)
         qs = LeaveType.objects.filter(is_active=True)
-        if user.company:
-            comp_qs = qs.filter(Q(company=user.company) | Q(company__isnull=True))
-            if comp_qs.exists():
-                return comp_qs
-        return qs
+        if company:
+            return qs.filter(Q(company=company) | Q(company__isnull=True))
+        if user.is_superuser:
+            return qs
+        return qs.filter(company__isnull=True)
 
 
 # ==========================================================
@@ -482,14 +493,31 @@ class LeaveBalanceListAPIView(generics.ListAPIView):
             "company",
         ).order_by("-year", "leave_type__leave_name")
 
-        if is_admin_or_hr:
-            if user.is_superuser or not user.company:
-                return qs
-            return qs.filter(company=user.company)
+        company = get_user_company(user)
+        if company:
+            if is_admin_or_hr:
+                return qs.filter(company=company)
+            emp_profile = getattr(user, "employee_profile", None)
+            if emp_profile:
+                from django.utils import timezone
+                from django.db.models import Q
+                current_year = timezone.now().year
+                for lt in LeaveType.objects.filter(Q(company=company) | Q(company__isnull=True), is_active=True):
+                    LeaveBalance.objects.get_or_create(
+                        employee=emp_profile,
+                        leave_type=lt,
+                        company=company,
+                        year=current_year,
+                        defaults={
+                            "allocated_days": lt.max_days_per_year,
+                            "used_days": 0,
+                            "remaining_days": lt.max_days_per_year,
+                        }
+                    )
+                return qs.filter(employee=emp_profile, company=company)
+            return qs.none()
 
-        emp_profile = getattr(user, "employee_profile", None)
-        if emp_profile:
-            return qs.filter(employee=emp_profile)
-        if user.company:
-            return qs.filter(company=user.company)
+        if user.is_superuser:
+            return qs
+
         return qs.none()

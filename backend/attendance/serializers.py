@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.utils import timezone
 
 from .models import (
     Holiday,
@@ -404,14 +405,15 @@ class CheckInSerializer(serializers.Serializer):
     """
 
     employee = serializers.PrimaryKeyRelatedField(
-        queryset=Employee.objects.filter(
-            is_active=True,
-        ),
+        queryset=Employee.objects.all(),
         required=False,
         allow_null=True,
     )
 
-    check_in = serializers.DateTimeField()
+    check_in = serializers.DateTimeField(
+        required=False,
+        default=timezone.now,
+    )
 
     remarks = serializers.CharField(
         required=False,
@@ -437,14 +439,15 @@ class CheckOutSerializer(serializers.Serializer):
     """
 
     employee = serializers.PrimaryKeyRelatedField(
-        queryset=Employee.objects.filter(
-            is_active=True,
-        ),
+        queryset=Employee.objects.all(),
         required=False,
         allow_null=True,
     )
 
-    check_out = serializers.DateTimeField()
+    check_out = serializers.DateTimeField(
+        required=False,
+        default=timezone.now,
+    )
 
     remarks = serializers.CharField(
         required=False,

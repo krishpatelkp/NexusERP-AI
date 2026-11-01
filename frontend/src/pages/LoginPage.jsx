@@ -1,25 +1,28 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { ArrowRight, Lock, Mail, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { FadeIn } from '../components/animations';
 export default function LoginPage() {
-    const [email, setEmail] = useState('Krish@gmail.com');
-    const [password, setPassword] = useState('password123');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(false);
     const navigate = useNavigate();
+    const { login } = useAuth();
+
     const handleLogin = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError(null);
         try {
-            await api.login(email, password);
+            await login(email, password);
             setSuccess(true);
             setTimeout(() => {
                 navigate('/dashboard');
-            }, 600);
+            }, 500);
         }
         catch (err) {
             setError(err.message || 'Invalid email or password');
@@ -28,6 +31,7 @@ export default function LoginPage() {
             setLoading(false);
         }
     };
+
     return (<div style={{
             minHeight: '100vh',
             display: 'flex',

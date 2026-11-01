@@ -252,7 +252,13 @@ class User(AbstractBaseUser, PermissionsMixin):
         if not self.is_active:
             return False
 
-        if self.is_superuser or self.is_staff or (self.role and "ADMIN" in self.role.role_name.upper()):
+        if self.is_superuser or self.is_staff or (
+            self.role and (
+                "ADMIN" in self.role.role_name.upper()
+                or "OWNER" in self.role.role_name.upper()
+                or (hasattr(self.role, "role_code") and self.role.role_code and self.role.role_code.upper() in ["ADMIN", "OWNER"])
+            )
+        ):
             return True
 
         if self.role is None:

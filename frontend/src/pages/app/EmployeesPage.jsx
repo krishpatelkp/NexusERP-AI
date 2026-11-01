@@ -91,7 +91,7 @@ export default function EmployeesPage() {
                 first_name: formData.first_name,
                 last_name: formData.last_name,
                 email: formData.email,
-                phone: formData.phone || '+919876543210',
+                phone: (formData.phone || '+919876543210').replace(/[\s\-\(\)]/g, ''),
                 gender: formData.gender,
                 marital_status: formData.marital_status,
                 blood_group: formData.blood_group,
@@ -100,8 +100,8 @@ export default function EmployeesPage() {
                 employment_type: formData.employment_type,
                 employee_status: 'Active',
                 basic_salary: Number(formData.basic_salary) || 50000,
-                department: Number(formData.department) || 1,
-                designation: Number(formData.designation) || 1,
+                department: Number(formData.department) || (departments[0]?.id || null),
+                designation: Number(formData.designation) || (designations[0]?.id || null),
             };
             await api.createEmployee(payload);
             setFormSuccess('Employee onboarded successfully!');
@@ -119,8 +119,8 @@ export default function EmployeesPage() {
                     blood_group: 'O+',
                     date_of_birth: '1998-01-01',
                     joining_date: new Date().toISOString().split('T')[0],
-                    department: departments[0]?.id || 1,
-                    designation: designations[0]?.id || 1,
+                    department: departments[0]?.id || '',
+                    designation: designations[0]?.id || '',
                     employment_type: 'Full-Time',
                     basic_salary: 50000,
                 });
@@ -244,11 +244,19 @@ export default function EmployeesPage() {
                     </button>
                   </td>
                 </tr>))}
-              {paginatedData.length === 0 && (<tr>
+              {loading ? (
+                <tr>
+                  <td colSpan={8} style={{ padding: 40, textAlign: 'center', color: '#767676' }}>
+                    <Loader2 size={20} className="animate-spin" style={{ display: 'inline-block', marginRight: 8, verticalAlign: 'middle' }} /> Loading employee roster...
+                  </td>
+                </tr>
+              ) : paginatedData.length === 0 && (
+                <tr>
                   <td colSpan={8} style={{ padding: 40, textAlign: 'center', color: '#767676' }}>
                     No employee records match the selected filter criteria.
                   </td>
-                </tr>)}
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

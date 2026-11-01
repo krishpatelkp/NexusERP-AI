@@ -16,6 +16,10 @@ from ai.constants import (
     OLLAMA_BASE_URL,
     OLLAMA_MODEL,
     OLLAMA_TIMEOUT,
+    GROQ_API_KEY,
+    GROQ_MODEL,
+    OPENAI_API_KEY,
+    OPENAI_MODEL,
 )
 from ai.exceptions import (
     LLMConnectionException,
@@ -24,22 +28,17 @@ from ai.exceptions import (
 
 
 # ==========================================================
-# OLLAMA CLIENT
+# OLLAMA & CLOUD LLM CLIENT
 # ==========================================================
 
 class OllamaClient:
     """
-    Thin client for the Ollama API.
+    Thin client for Ollama API & Cloud LLM Providers (Groq / OpenAI).
 
     Responsibilities:
-        - Send prompts to Ollama
+        - Send prompts to Groq / OpenAI (if API key present) or local Ollama
         - Return raw text responses
         - Handle connection errors cleanly
-
-    This class does NOT:
-        - Build prompts (that is prompt_builder.py)
-        - Parse responses (that is parser.py)
-        - Choose tools (that is planner.py)
     """
 
     def __init__(
@@ -53,6 +52,29 @@ class OllamaClient:
         self.timeout = timeout
         self._chat_url = f"{self.base_url}/api/chat"
 
+    def _chat_cloud_openai(self, api_key: str, endpoint: str, model: str, messages: list, temperature: float) -> str:
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model": model,
+            "messages": messages,
+            "temperature": temperature,
+        }
+        try:
+            response = requests.post(endpoint, json=payload, headers=headers, timeout=self.timeout)
+            response.raise_for_status()
+        except requests.exceptions.RequestException as exc:
+            raise LLMConnectionException(f"Cloud LLM API error ({endpoint}): {exc}")
+
+        try:
+            data = response.json()
+            return data["choices"][0]["message"]["content"]
+        except (KeyError, IndexError, TypeError, json.JSONDecodeError) as exc:
+            raise LLMResponseException(f"Invalid response from Cloud LLM API: {exc}")
+
+
     def chat(
         self,
         messages: list,
@@ -60,40 +82,29 @@ class OllamaClient:
         stream: bool = False,
     ) -> str:
         """
-        Send a list of messages to Ollama and return
-        the assistant's response as a string.
-
-        Parameters
-        ----------
-        messages : list of dict
-            Each dict must have "role" and "content".
-            Example:
-                [
-                    {"role": "system",    "content": "..."},
-                    {"role": "user",      "content": "..."},
-                    {"role": "assistant", "content": "..."},
-                ]
-
-        temperature : float
-            Lower = more deterministic (default 0.1 for tool use).
-
-        stream : bool
-            Always False for now. Streaming is a future feature.
-
-        Returns
-        -------
-        str
-            The assistant's reply text.
-
-        Raises
-        ------
-        LLMConnectionException
-            If Ollama is not running or unreachable.
-
-        LLMResponseException
-            If Ollama returns an unexpected response format.
+        Send a list of messages to Cloud API (Groq/OpenAI) or local Ollama.
         """
+        # Priority 1: Groq Cloud API
+        if GROQ_API_KEY:
+            return self._chat_cloud_openai(
+                api_key=GROQ_API_KEY,
+                endpoint="https://api.groq.com/openai/v1/chat/completions",
+                model=GROQ_MODEL,
+                messages=messages,
+                temperature=temperature,
+            )
 
+        # Priority 2: OpenAI Cloud API
+        if OPENAI_API_KEY:
+            return self._chat_cloud_openai(
+                api_key=OPENAI_API_KEY,
+                endpoint="https://api.openai.com/v1/chat/completions",
+                model=OPENAI_MODEL,
+                messages=messages,
+                temperature=temperature,
+            )
+
+        # Priority 3: Local Ollama
         payload = {
             "model":    self.model,
             "messages": messages,
@@ -114,7 +125,7 @@ class OllamaClient:
         except requests.exceptions.ConnectionError:
             raise LLMConnectionException(
                 f"Cannot connect to Ollama at {self.base_url}. "
-                "Make sure Ollama is running."
+                "Make sure Ollama is running or set GROQ_API_KEY in environment."
             )
 
         except requests.exceptions.Timeout:
@@ -139,9 +150,11 @@ class OllamaClient:
 
     def is_available(self) -> bool:
         """
-        Returns True if Ollama is reachable.
-        Used by the health check endpoint.
+        Returns True if Cloud LLM API key is present or local Ollama is reachable.
         """
+        if GROQ_API_KEY or OPENAI_API_KEY:
+            return True
+
         try:
             response = requests.get(
                 f"{self.base_url}/api/tags",
@@ -149,4 +162,4 @@ class OllamaClient:
             )
             return response.status_code == 200
         except Exception:
-            return False
+            return False

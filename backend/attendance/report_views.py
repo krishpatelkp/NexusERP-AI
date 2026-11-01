@@ -52,6 +52,9 @@ from .report_serializers import (
 from .reports import AttendanceReportService
 
 
+from core.utils import get_user_company
+
+
 # ==========================================================
 # BASE ATTENDANCE REPORT VIEW
 # ==========================================================
@@ -113,7 +116,7 @@ class BaseAttendanceReportAPIView(
         every report inherits it automatically.
         """
         return AttendanceReportService(
-            company=self.request.user.employee_profile.company,
+            company=get_user_company(self.request.user),
         )
 
 
@@ -577,24 +580,37 @@ class AttendanceExceptionAPIView(
 
         # ── 2. Call service ──────────────────────────────
         service = self.get_service()
-        results = service.exceptions(
+        records = service.exceptions(
             date_from=date_from,
             date_to=date_to,
         )
 
+        from .models import AttendanceSource, ApprovalStatus
+
         # ── 3. Build response ────────────────────────────
-        # exceptions() returns a list of dicts
-        # Each dict has "record" and "exception_types"
-        # We serialize "record" and attach "exception_types"
         response_data = []
 
-        for item in results:
-            serialized = self.get_serializer(
-                item["record"],
-            ).data
-            serialized["exception_types"] = (
-                item["exception_types"]
-            )
+        for record in records:
+            exc_types = []
+            if record.late_minutes and record.late_minutes > 0:
+                exc_types.append(f"Late Arrival ({record.late_minutes}m)")
+            if record.early_exit_minutes and record.early_exit_minutes > 0:
+                exc_types.append(f"Early Exit ({record.early_exit_minutes}m)")
+            if not record.check_in:
+                exc_types.append("Missing Check-In")
+            if not record.check_out:
+                exc_types.append("Missing Check-Out")
+            if getattr(record, "attendance_source", None) == AttendanceSource.MANUAL:
+                exc_types.append("Manual Entry")
+            if getattr(record, "attendance_modified", False):
+                exc_types.append("Modified Record")
+            if getattr(record, "approval_status", None) == ApprovalStatus.PENDING:
+                exc_types.append("Pending Approval")
+            if not exc_types:
+                exc_types.append("Anomaly Flagged")
+
+            serialized = self.get_serializer(record).data
+            serialized["exception_types"] = exc_types
             response_data.append(serialized)
 
         # ── 4. Paginate ──────────────────────────────────

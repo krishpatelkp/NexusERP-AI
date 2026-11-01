@@ -6,7 +6,7 @@ export default function PayrollPage() {
     const { isAdmin } = useAuth();
     // State
     const [payslips, setPayslips] = useState([]);
-    const [summary, setSummary] = useState({ total_payslips: 105, total_gross: 110000, total_net: 85000 });
+    const [summary, setSummary] = useState({ total_payslips: 0, total_gross: 0, total_net: 0 });
     const [selectedRun, setSelectedRun] = useState(null);
     const [expandedPayslipId, setExpandedPayslipId] = useState(null);
     useEffect(() => {
@@ -20,9 +20,9 @@ export default function PayrollPage() {
                     setPayslips(slips);
                 if (paySum) {
                     setSummary({
-                        total_payslips: paySum.total_payslips || (slips.length > 0 ? slips.length : 105),
-                        total_gross: paySum.total_gross || 110000,
-                        total_net: paySum.total_net_payroll || paySum.total_net || 85000,
+                        total_payslips: paySum.total_payslips ?? slips.length ?? 0,
+                        total_gross: paySum.total_gross ?? 0,
+                        total_net: paySum.total_net_payroll ?? paySum.total_net ?? 0,
                     });
                 }
             }
@@ -35,12 +35,18 @@ export default function PayrollPage() {
     const toggleExpand = (id) => {
         setExpandedPayslipId(expandedPayslipId === id ? null : id);
     };
-    // Demo Payroll Runs for Admin
-    const payrollRuns = [
-        { id: 1, month: 'July', year: 2026, status: 'COMPLETED', total_employees: 105, total_net: 85000 },
-        { id: 2, month: 'June', year: 2026, status: 'COMPLETED', total_employees: 102, total_net: 82500 },
-        { id: 3, month: 'May', year: 2026, status: 'COMPLETED', total_employees: 98, total_net: 79000 },
-    ];
+
+    // Dynamic Payroll Runs for Admin
+    const payrollRuns = (summary.total_payslips > 0 || payslips.length > 0) ? [
+        {
+            id: 1,
+            month: new Date().toLocaleString('default', { month: 'long' }),
+            year: new Date().getFullYear(),
+            status: 'COMPLETED',
+            total_employees: summary.total_payslips || payslips.length,
+            total_net: summary.total_net || 0,
+        }
+    ] : [];
     // ─────────────────────────────────────────
     // ADMIN / HR VIEW
     // ─────────────────────────────────────────
@@ -60,7 +66,7 @@ export default function PayrollPage() {
             <div style={{ fontSize: 32, fontWeight: 700, color: '#000000', lineHeight: 1, marginBottom: 8 }}>
               {summary.total_payslips}
             </div>
-            <div style={{ fontSize: 13, color: '#137333', fontWeight: 600 }}>Active Payroll Register</div>
+            <div style={{ fontSize: 13, color: summary.total_payslips > 0 ? '#137333' : '#767676', fontWeight: 600 }}>Active Payroll Register</div>
           </div>
 
           <div style={{ background: '#ffffff', border: '1px solid #E6E6E6', padding: 24, borderRadius: 0 }}>
@@ -68,7 +74,7 @@ export default function PayrollPage() {
               Total Gross Payroll
             </div>
             <div style={{ fontSize: 32, fontWeight: 700, color: '#000000', lineHeight: 1, marginBottom: 8 }}>
-              ₹{Number(summary.total_gross || 110000).toLocaleString()}
+              ₹{Number(summary.total_gross || 0).toLocaleString()}
             </div>
             <div style={{ fontSize: 13, color: '#767676' }}>Pre-tax Compensation</div>
           </div>
@@ -78,9 +84,9 @@ export default function PayrollPage() {
               Total Net Payroll Outflow
             </div>
             <div style={{ fontSize: 32, fontWeight: 700, color: '#000000', lineHeight: 1, marginBottom: 8 }}>
-              ₹{Number(summary.total_net || 85000).toLocaleString()}
+              ₹{Number(summary.total_net || 0).toLocaleString()}
             </div>
-            <div style={{ fontSize: 13, color: '#137333', fontWeight: 600 }}>Disbursed to Accounts</div>
+            <div style={{ fontSize: 13, color: summary.total_net > 0 ? '#137333' : '#767676', fontWeight: 600 }}>Disbursed to Accounts</div>
           </div>
         </div>
 
@@ -122,6 +128,13 @@ export default function PayrollPage() {
                       </button>
                     </td>
                   </tr>))}
+                {payrollRuns.length === 0 && (
+                  <tr>
+                    <td colSpan={6} style={{ padding: '32px 12px', textAlign: 'center', color: '#767676' }}>
+                      No payroll execution runs recorded yet for this workspace.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -156,16 +169,26 @@ export default function PayrollPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr style={{ borderBottom: '1px solid #E6E6E6' }}>
-                    <td style={{ padding: '12px 10px', fontWeight: 600 }}>Krish Patel</td>
-                    <td style={{ padding: '12px 10px' }}>₹60,000</td>
-                    <td style={{ padding: '12px 10px' }}>₹85,000</td>
-                    <td style={{ padding: '12px 10px', color: '#C5221F' }}>₹0</td>
-                    <td style={{ padding: '12px 10px', fontWeight: 700 }}>₹85,000</td>
-                    <td style={{ padding: '12px 10px' }}>
-                      <span style={{ padding: '2px 6px', background: '#E6F4EA', color: '#137333', fontSize: 11, fontWeight: 700 }}>PAID</span>
-                    </td>
-                  </tr>
+                  {payslips.length > 0 ? (
+                    payslips.map((slip, i) => (
+                      <tr key={slip.id || i} style={{ borderBottom: '1px solid #E6E6E6' }}>
+                        <td style={{ padding: '12px 10px', fontWeight: 600 }}>{slip.employee_name || slip.employee || 'Employee'}</td>
+                        <td style={{ padding: '12px 10px' }}>₹{Number(slip.basic_salary || 0).toLocaleString()}</td>
+                        <td style={{ padding: '12px 10px' }}>₹{Number(slip.gross_salary || 0).toLocaleString()}</td>
+                        <td style={{ padding: '12px 10px', color: '#C5221F' }}>₹{Number(slip.deductions || 0).toLocaleString()}</td>
+                        <td style={{ padding: '12px 10px', fontWeight: 700 }}>₹{Number(slip.net_salary || 0).toLocaleString()}</td>
+                        <td style={{ padding: '12px 10px' }}>
+                          <span style={{ padding: '2px 6px', background: '#E6F4EA', color: '#137333', fontSize: 11, fontWeight: 700 }}>{slip.status || 'PAID'}</span>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={6} style={{ padding: '24px 10px', textAlign: 'center', color: '#767676' }}>
+                        No individual employee payslip line items found for this cycle.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -190,9 +213,9 @@ export default function PayrollPage() {
           {payslips.length > 0 ? (payslips.map((slip, i) => {
             const id = slip.id || i;
             const isExpanded = expandedPayslipId === id;
-            const basic = Number(slip.basic_salary || 60000);
-            const gross = Number(slip.gross_salary || 85000);
-            const net = Number(slip.net_salary || 85000);
+            const basic = Number(slip.basic_salary || 0);
+            const gross = Number(slip.gross_salary || 0);
+            const net = Number(slip.net_salary || 0);
             const deductions = Number(slip.deductions || 0);
             return (<div key={id} style={{ border: '1px solid #E6E6E6', background: '#ffffff' }}>
                   {/* Header Row */}
@@ -209,10 +232,10 @@ export default function PayrollPage() {
                       </div>
                       <div>
                         <div style={{ fontSize: 15, fontWeight: 700, color: '#000000' }}>
-                          {slip.month || 'July'} {slip.year || 2026} Payslip
+                          {slip.month || 'Current'} {slip.year || new Date().getFullYear()} Payslip
                         </div>
                         <div style={{ fontSize: 12, color: '#767676' }}>
-                          Disbursed on {slip.disbursement_date || '2026-07-31'}
+                          Disbursed on {slip.disbursement_date || 'Pending'}
                         </div>
                       </div>
                     </div>
@@ -238,11 +261,11 @@ export default function PayrollPage() {
                         </div>
                         <div>
                           <div style={{ color: '#767676' }}>House Rent Allowance (HRA)</div>
-                          <div style={{ fontWeight: 700, color: '#000' }}>₹20,000</div>
+                          <div style={{ fontWeight: 700, color: '#000' }}>₹{(basic * 0.4).toLocaleString()}</div>
                         </div>
                         <div>
                           <div style={{ color: '#767676' }}>Special Allowances</div>
-                          <div style={{ fontWeight: 700, color: '#000' }}>₹5,000</div>
+                          <div style={{ fontWeight: 700, color: '#000' }}>₹{Math.max(0, gross - basic - (basic * 0.4)).toLocaleString()}</div>
                         </div>
                         <div>
                           <div style={{ color: '#767676' }}>Gross Salary</div>
@@ -259,12 +282,8 @@ export default function PayrollPage() {
                       </div>
                     </div>)}
                 </div>);
-        })) : (<div style={{ border: '1px solid #E6E6E6', padding: '16px 20px', background: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#000' }}>July 2026 Payslip</div>
-                <div style={{ fontSize: 12, color: '#767676' }}>Disbursed on 2026-07-31</div>
-              </div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#000' }}>₹85,000</div>
+        })) : (<div style={{ border: '1px solid #E6E6E6', padding: '32px 20px', background: '#ffffff', textAlign: 'center', color: '#767676' }}>
+              No salary payslips generated yet for your account.
             </div>)}
         </div>
       </div>

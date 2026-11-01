@@ -2,7 +2,7 @@
  * NexusERP-AI Frontend API Service
  * Connects React UI to Django REST Framework backend on http://127.0.0.1:8000/api/
  */
-const API_BASE = '/api';
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 class APIService {
     token = localStorage.getItem('nexuserp_token');
     setToken(token) {
@@ -20,9 +20,6 @@ class APIService {
         if (!this.token) {
             this.token = localStorage.getItem('nexuserp_token');
         }
-        if (!this.token) {
-            await this.autoLogin();
-        }
     }
     async request(endpoint, options = {}) {
         await this.ensureAuth();
@@ -38,11 +35,9 @@ class APIService {
             headers,
         });
         if (response.status === 401) {
-            const reloginSuccess = await this.autoLogin();
-            if (reloginSuccess) {
-                headers['Authorization'] = `Bearer ${this.token}`;
-                response = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
-            }
+            this.clearToken();
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.detail || errData.error || errData.message || 'Session expired. Please sign in again.');
         }
         if (!response.ok) {
             const errData = await response.json().catch(() => ({}));
@@ -50,33 +45,7 @@ class APIService {
         }
         return response.json();
     }
-    /**
-     * Auto-login helper for seamless demo & API connection
-     */
-    async autoLogin() {
-        try {
-            const res = await fetch(`${API_BASE}/auth/login/`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email: 'Krish@gmail.com',
-                    password: 'password123',
-                }),
-            });
-            if (res.ok) {
-                const data = await res.json();
-                const token = data.tokens?.access || data.access;
-                if (token) {
-                    this.setToken(token);
-                    return true;
-                }
-            }
-        }
-        catch {
-            // silent fallback
-        }
-        return false;
-    }
+
     /**
      * Login with user credentials
      */
@@ -133,14 +102,17 @@ class APIService {
             throw new Error(err || 'Registration failed');
         }
         const token = data.tokens?.access || data.access;
-        if (token) {
+        const refresh = data.tokens?.refresh || data.refresh;
+        if (token)
             this.setToken(token);
-        }
+        if (refresh)
+            localStorage.setItem('nexuserp_refresh_token', refresh);
         return data;
     }
     /**
      * Get current user profile
      */
+
     async getMe() {
         return this.request('/auth/me/');
     }
@@ -152,6 +124,13 @@ class APIService {
             method: 'POST',
             body: JSON.stringify({ question }),
         });
+    }
+    async getAIHealth() {
+        return this.request('/ai/health/').catch(() => ({
+            ollama_available: false,
+            model: 'qwen3:8b',
+            status: 'offline',
+        }));
     }
     // ─────────────────────────────────────────
     // EMPLOYEES
@@ -281,9 +260,36 @@ class APIService {
         const data = await this.request('/payments/');
         return Array.isArray(data) ? data : data.results || [];
     }
-    async getNotifications() {
-        const data = await this.request('/notifications/');
+    async getNotifications(unreadOnly = false) {
+        const query = unreadOnly ? '?unread_only=true' : '';
+        const data = await this.request(`/notifications/${query}`);
         return Array.isArray(data) ? data : data.results || [];
+    }
+    async getUnreadNotificationCount() {
+        return this.request('/notifications/unread-count/').catch(() => ({ unread_count: 0 }));
+    }
+    async markNotificationRead(id) {
+        return this.request(`/notifications/${id}/read/`, { method: 'PATCH' });
+    }
+    async markAllNotificationsRead() {
+        return this.request('/notifications/mark-all-read/', { method: 'POST' });
+    }
+    async updateProfile(payload) {
+        return this.request('/auth/me/update/', {
+            method: 'PATCH',
+            body: JSON.stringify(payload),
+        });
+    }
+    async changePassword(oldPassword, newPassword, confirmPassword) {
+        return this.request('/auth/change-password/', {
+            method: 'POST',
+            body: JSON.stringify({
+                old_password: oldPassword,
+                new_password: newPassword,
+                confirm_password: confirmPassword,
+                confirm_new_password: confirmPassword,
+            }),
+        });
     }
     // ─────────────────────────────────────────
     // REPORTS

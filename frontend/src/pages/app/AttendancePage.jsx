@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { CheckCircle2, LogIn, LogOut } from 'lucide-react';
@@ -10,14 +10,15 @@ export default function AttendancePage() {
     const [dailyRecords, setDailyRecords] = useState([]);
     // Dashboard Stats State
     const [attDashboard, setAttDashboard] = useState({
-        attendance_percentage: 94.2,
-        present_count: 98,
-        absent_count: 3,
-        late_count: 4,
-        on_leave_count: 2,
+        attendance_percentage: 0,
+        present_count: 0,
+        absent_count: 0,
+        late_count: 0,
+        on_leave_count: 0,
         not_marked_count: 0,
-        total_employees: 105,
+        total_employees: 0,
     });
+
     // Employee State
     const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString());
     const [clockedIn, setClockedIn] = useState(false);
@@ -34,7 +35,7 @@ export default function AttendancePage() {
         return () => clearInterval(timer);
     }, []);
     // Load Admin Daily Report
-    const loadDailyReport = async (dateStr) => {
+    const loadDailyReport = useCallback(async (dateStr) => {
         try {
             const records = await api.getDailyAttendance(dateStr);
             setDailyRecords(records);
@@ -42,9 +43,9 @@ export default function AttendancePage() {
         catch {
             setDailyRecords([]);
         }
-    };
+    }, []);
     // Load Dashboard Stats
-    const loadDashboard = async () => {
+    const loadDashboard = useCallback(async () => {
         try {
             const dash = await api.getAttendanceDashboard();
             if (dash)
@@ -53,7 +54,7 @@ export default function AttendancePage() {
         catch {
             // Fallback
         }
-    };
+    }, []);
     const formatTime = (ts) => {
         if (!ts)
             return '';
@@ -67,8 +68,9 @@ export default function AttendancePage() {
         }
         return ts;
     };
-    const loadEmployeeData = () => {
-        const empId = user?.employee_id || user?.employee_id_number || user?.id || 1;
+    const loadEmployeeData = useCallback(() => {
+        const empId = user?.employee_id || user?.employee_id_number || user?.id;
+        if (!empId) return;
         api.getEmployeeAttendanceHistory(empId).then((history) => {
             const list = Array.isArray(history) ? history : history?.results || [];
             if (list && list.length > 0) {
@@ -87,8 +89,9 @@ export default function AttendancePage() {
                 api.getDailyAttendance().then((records) => {
                     const rList = Array.isArray(records) ? records : records?.results || [];
                     if (rList && rList.length > 0) {
-                        setMyHistory(rList.slice(0, 30));
-                        const todayRec = rList.find((r) => r.employee === user?.id || r.employee_id === user?.id) || rList[0];
+                        const myRecords = rList.filter((r) => r.employee === user?.employee_id || r.employee_id === user?.employee_id || r.employee === user?.id || r.employee_id === user?.id);
+                        setMyHistory(myRecords);
+                        const todayRec = myRecords[0];
                         if (todayRec) {
                             if (todayRec.check_in) {
                                 setClockedIn(true);
@@ -103,16 +106,14 @@ export default function AttendancePage() {
                 }).catch(() => null);
             }
         }).catch(() => null);
-    };
+    }, [user?.employee_id, user?.employee_id_number, user?.id]);
     useEffect(() => {
+        loadEmployeeData();
         if (isAdmin) {
             loadDailyReport(selectedDate);
             loadDashboard();
         }
-        else {
-            loadEmployeeData();
-        }
-    }, [isAdmin, selectedDate, user?.id, user?.employee_id, user?.employee_id_number]);
+    }, [isAdmin, selectedDate, loadDailyReport, loadDashboard, loadEmployeeData]);
     const handleDateChange = (e) => {
         const val = e.target.value;
         setSelectedDate(val);
@@ -127,6 +128,10 @@ export default function AttendancePage() {
                 setCheckInTime(new Date().toLocaleTimeString());
                 setErrorMsg(null);
                 loadEmployeeData();
+                if (isAdmin) {
+                    loadDailyReport(selectedDate);
+                    loadDashboard();
+                }
             }
         }
         catch (err) {
@@ -142,6 +147,10 @@ export default function AttendancePage() {
                 setCheckOutTime(new Date().toLocaleTimeString());
                 setErrorMsg(null);
                 loadEmployeeData();
+                if (isAdmin) {
+                    loadDailyReport(selectedDate);
+                    loadDashboard();
+                }
             }
         }
         catch (err) {
@@ -164,7 +173,8 @@ export default function AttendancePage() {
         {status || 'Absent'}
       </span>);
     };
-    const totalEmp = attDashboard.total_employees || 105;
+    const totalEmp = attDashboard.total_employees ?? 0;
+
     // ─────────────────────────────────────────
     // ADMIN / HR VIEW
     // ─────────────────────────────────────────
@@ -195,6 +205,15 @@ export default function AttendancePage() {
                 fontSize: 13, fontWeight: 700, cursor: 'pointer', borderRadius: 0,
             }}>
             Tab 2 — Dashboard Analytics
+          </button>
+          <button onClick={() => setActiveTab('clock')} style={{
+                padding: '10px 20px',
+                background: activeTab === 'clock' ? '#000000' : 'transparent',
+                color: activeTab === 'clock' ? '#ffffff' : '#000000',
+                border: activeTab === 'clock' ? 'none' : '1px solid #E6E6E6',
+                fontSize: 13, fontWeight: 700, cursor: 'pointer', borderRadius: 0,
+            }}>
+            Tab 3 — Mark My Attendance
           </button>
         </div>
 
@@ -237,9 +256,9 @@ export default function AttendancePage() {
                           <td style={{ padding: '14px 12px', fontWeight: 700, color: '#000000' }}>
                             {r.employee_name || `Employee #${r.employee}`}
                           </td>
-                          <td style={{ padding: '14px 12px', color: '#555' }}>{r.department_name || 'Engineering'}</td>
-                          <td style={{ padding: '14px 12px', color: '#137333', fontWeight: 600 }}>{r.check_in || '09:00 AM'}</td>
-                          <td style={{ padding: '14px 12px', color: '#555' }}>{r.check_out || '06:00 PM'}</td>
+                          <td style={{ padding: '14px 12px', color: '#555' }}>{r.department_name || '—'}</td>
+                          <td style={{ padding: '14px 12px', color: '#137333', fontWeight: 600 }}>{r.check_in || '—'}</td>
+                          <td style={{ padding: '14px 12px', color: '#555' }}>{r.check_out || '—'}</td>
                           <td style={{ padding: '14px 12px', fontWeight: 600 }}>{hrs} hrs</td>
                           <td style={{ padding: '14px 12px', color: r.late_minutes > 0 ? '#C5221F' : '#555' }}>
                             {r.late_minutes ? `${r.late_minutes} mins` : '0 mins'}
@@ -269,7 +288,7 @@ export default function AttendancePage() {
                   Attendance Percentage
                 </div>
                 <div style={{ fontSize: 32, fontWeight: 700, color: '#000000', lineHeight: 1, marginBottom: 8 }}>
-                  {attDashboard.attendance_percentage ? `${attDashboard.attendance_percentage}%` : '94.2%'}
+                  {attDashboard.attendance_percentage != null ? `${attDashboard.attendance_percentage}%` : '0%'}
                 </div>
                 <div style={{ fontSize: 13, color: '#137333', fontWeight: 600 }}>Target 95.0%</div>
               </div>
@@ -279,7 +298,7 @@ export default function AttendancePage() {
                   Present Count
                 </div>
                 <div style={{ fontSize: 32, fontWeight: 700, color: '#000000', lineHeight: 1, marginBottom: 8 }}>
-                  {attDashboard.present_count ?? 98}
+                  {attDashboard.present_count ?? 0}
                 </div>
                 <div style={{ fontSize: 13, color: '#767676' }}>out of {totalEmp} personnel</div>
               </div>
@@ -289,7 +308,7 @@ export default function AttendancePage() {
                   Late Arrivals
                 </div>
                 <div style={{ fontSize: 32, fontWeight: 700, color: '#000000', lineHeight: 1, marginBottom: 8 }}>
-                  {attDashboard.late_count ?? 4}
+                  {attDashboard.late_count ?? 0}
                 </div>
                 <div style={{ fontSize: 13, color: '#B06000', fontWeight: 600 }}>Flagged for Review</div>
               </div>
@@ -299,7 +318,7 @@ export default function AttendancePage() {
                   Absent Count
                 </div>
                 <div style={{ fontSize: 32, fontWeight: 700, color: '#000000', lineHeight: 1, marginBottom: 8 }}>
-                  {attDashboard.absent_count ?? 3}
+                  {attDashboard.absent_count ?? 0}
                 </div>
                 <div style={{ fontSize: 13, color: '#C5221F', fontWeight: 600 }}>Unexcused Absences</div>
               </div>
@@ -312,10 +331,10 @@ export default function AttendancePage() {
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {[
-                    { label: 'Present', count: attDashboard.present_count ?? 98 },
-                    { label: 'Absent', count: attDashboard.absent_count ?? 3 },
-                    { label: 'Late', count: attDashboard.late_count ?? 4 },
-                    { label: 'On Leave', count: attDashboard.on_leave_count ?? 2 },
+                    { label: 'Present', count: attDashboard.present_count ?? 0 },
+                    { label: 'Absent', count: attDashboard.absent_count ?? 0 },
+                    { label: 'Late', count: attDashboard.late_count ?? 0 },
+                    { label: 'On Leave', count: attDashboard.on_leave_count ?? 0 },
                     { label: 'Not Marked', count: attDashboard.not_marked_count ?? 0 },
                 ].map((item) => {
                     const pct = totalEmp > 0 ? Math.min(100, Math.round((item.count / totalEmp) * 100)) : 0;
@@ -332,6 +351,62 @@ export default function AttendancePage() {
               </div>
             </div>
           </div>)}
+
+        {/* TAB 3: MARK MY ATTENDANCE */}
+        {activeTab === 'clock' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {errorMsg && (
+              <div style={{ background: '#FCE8E6', border: '1px solid #F5C2C7', color: '#C5221F', padding: '12px 16px', fontSize: 13, fontWeight: 600 }}>
+                {errorMsg}
+              </div>
+            )}
+
+            <div style={{ background: '#000000', color: '#ffffff', padding: 28, border: '1px solid #000000', borderRadius: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 20 }}>
+                <div>
+                  <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#999999', marginBottom: 4 }}>
+                    Live System Time & Attendance Clock
+                  </div>
+                  <div style={{ fontSize: 32, fontWeight: 700, fontFamily: 'monospace', letterSpacing: '-0.02em', marginBottom: 6 }}>
+                    {currentTime}
+                  </div>
+                  <div style={{ fontSize: 13, color: '#cccccc' }}>
+                    {clockedIn && !clockedOut && `Checked in at ${checkInTime}`}
+                    {clockedIn && clockedOut && `Attendance Completed — In: ${checkInTime} | Out: ${checkOutTime}`}
+                    {!clockedIn && 'No attendance recorded today'}
+                  </div>
+                </div>
+
+                <div>
+                  {!clockedIn ? (
+                    <button onClick={handleCheckIn} style={{
+                      padding: '14px 28px', background: '#137333', color: '#ffffff',
+                      border: 'none', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                      display: 'inline-flex', alignItems: 'center', gap: 8, borderRadius: 0,
+                    }}>
+                      <LogIn size={18} /> Mark Check In
+                    </button>
+                  ) : !clockedOut ? (
+                    <button onClick={handleCheckOut} style={{
+                      padding: '14px 28px', background: '#C5221F', color: '#ffffff',
+                      border: 'none', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                      display: 'inline-flex', alignItems: 'center', gap: 8, borderRadius: 0,
+                    }}>
+                      <LogOut size={18} /> Mark Check Out
+                    </button>
+                  ) : (
+                    <div style={{
+                      padding: '12px 20px', background: 'rgba(255,255,255,0.1)', color: '#ffffff',
+                      fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 8,
+                    }}>
+                      <CheckCircle2 size={18} color="#28C840" /> Completed
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>);
     }
     // ─────────────────────────────────────────

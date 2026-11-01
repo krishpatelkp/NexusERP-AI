@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { ArrowRight, Lock, Mail, User, Phone, Building2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { FadeIn } from '../components/animations';
+
 export default function RegisterPage() {
     const [formData, setFormData] = useState({
         email: '',
@@ -16,6 +18,7 @@ export default function RegisterPage() {
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(false);
     const navigate = useNavigate();
+    const { register } = useAuth();
     const handleRegister = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -26,17 +29,18 @@ export default function RegisterPage() {
             return;
         }
         try {
-            await api.register({
+            await register({
                 email: formData.email,
                 username: formData.username,
                 phone_number: formData.phone_number,
+                company_name: formData.company_name,
                 password: formData.password,
                 confirm_password: formData.confirm_password,
             });
             setSuccess(true);
             setTimeout(() => {
                 navigate('/dashboard');
-            }, 800);
+            }, 600);
         }
         catch (err) {
             setError(err.message || 'Registration failed');
@@ -45,6 +49,8 @@ export default function RegisterPage() {
             setLoading(false);
         }
     };
+
+
     return (<div style={{
             minHeight: '100vh',
             display: 'flex',

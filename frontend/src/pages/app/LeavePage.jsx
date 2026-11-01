@@ -164,6 +164,15 @@ export default function LeavePage() {
             }}>
             Tab 2 — Leave Balances Audit
           </button>
+          <button onClick={() => setActiveTab('apply')} style={{
+                padding: '10px 20px',
+                background: activeTab === 'apply' ? '#000000' : 'transparent',
+                color: activeTab === 'apply' ? '#ffffff' : '#000000',
+                border: activeTab === 'apply' ? 'none' : '1px solid #E6E6E6',
+                fontSize: 13, fontWeight: 700, cursor: 'pointer', borderRadius: 0,
+            }}>
+            Tab 3 — Apply for Leave
+          </button>
         </div>
 
         {/* TAB 1: ALL REQUESTS */}
@@ -270,10 +279,10 @@ export default function LeavePage() {
                       <td style={{ padding: '14px 12px', fontWeight: 700, color: '#000000' }}>
                         {b.employee_name || `Employee #${b.employee}`}
                       </td>
-                      <td style={{ padding: '14px 12px', color: '#555' }}>{b.leave_type_name || b.leave_type || 'Casual Leave'}</td>
-                      <td style={{ padding: '14px 12px', fontWeight: 600 }}>{b.allocated_days || 12} Days</td>
-                      <td style={{ padding: '14px 12px', color: '#C5221F', fontWeight: 600 }}>{b.used_days || 0} Days</td>
-                      <td style={{ padding: '14px 12px', color: '#137333', fontWeight: 700 }}>{b.remaining_days || 12} Days</td>
+                      <td style={{ padding: '14px 12px', color: '#555' }}>{b.leave_type_name || b.leave_type || '—'}</td>
+                      <td style={{ padding: '14px 12px', fontWeight: 600 }}>{b.allocated_days ?? 0} Days</td>
+                      <td style={{ padding: '14px 12px', color: '#C5221F', fontWeight: 600 }}>{b.used_days ?? 0} Days</td>
+                      <td style={{ padding: '14px 12px', color: '#137333', fontWeight: 700 }}>{b.remaining_days ?? 0} Days</td>
                     </tr>))}
                   {balances.length === 0 && (<tr>
                       <td colSpan={5} style={{ padding: 32, textAlign: 'center', color: '#767676' }}>
@@ -284,6 +293,78 @@ export default function LeavePage() {
               </table>
             </div>
           </div>)}
+
+        {/* TAB 3: APPLY FOR LEAVE */}
+        {activeTab === 'apply' && (
+          <div style={{ background: '#ffffff', border: '1px solid #E6E6E6', padding: 28 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: '#000000', margin: '0 0 16px' }}>
+              Submit New Leave Application
+            </h3>
+
+            {successMsg && (
+              <div style={{ padding: '12px 16px', background: '#E6F4EA', border: '1px solid #CEEAD6', color: '#137333', fontSize: 13, fontWeight: 600, marginBottom: 20 }}>
+                {successMsg}
+              </div>
+            )}
+            {errorMsg && (
+              <div style={{ padding: '12px 16px', background: '#FCE8E6', border: '1px solid #FAD2CF', color: '#C5221F', fontSize: 13, fontWeight: 600, marginBottom: 20 }}>
+                {errorMsg}
+              </div>
+            )}
+
+            <form onSubmit={handleApply} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#000' }}>
+                  Leave Type
+                </label>
+                <select value={form.leave_type} onChange={(e) => setForm({ ...form, leave_type: Number(e.target.value) })} style={{ width: '100%', padding: '10px 14px', background: '#F7F6F3', border: '1px solid #E6E6E6', fontSize: 14, outline: 'none' }}>
+                  {leaveTypes.length > 0 ? (leaveTypes.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name || t.leave_name || t.leave_type_name || `Leave Type #${t.id}`}
+                    </option>
+                  ))) : (
+                    <>
+                      <option value={1}>Casual Leave</option>
+                      <option value={2}>Sick Leave</option>
+                      <option value={3}>Earned Paid Leave</option>
+                    </>
+                  )}
+                </select>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#000' }}>
+                    Start Date
+                  </label>
+                  <input type="date" required value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} style={{ width: '100%', padding: '10px 14px', background: '#F7F6F3', border: '1px solid #E6E6E6', fontSize: 14, outline: 'none' }}/>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#000' }}>
+                    End Date
+                  </label>
+                  <input type="date" required value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} style={{ width: '100%', padding: '10px 14px', background: '#F7F6F3', border: '1px solid #E6E6E6', fontSize: 14, outline: 'none' }}/>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#000' }}>
+                  Reason for Leave
+                </label>
+                <textarea required rows={3} value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} placeholder="State clear reason for your leave request..." style={{ width: '100%', padding: '10px 14px', background: '#F7F6F3', border: '1px solid #E6E6E6', fontSize: 14, outline: 'none', fontFamily: 'inherit' }}/>
+              </div>
+
+              <button type="submit" disabled={submitting} style={{
+                padding: '12px 24px', background: '#000000', color: '#ffffff',
+                border: 'none', fontSize: 13, fontWeight: 700, cursor: submitting ? 'not-allowed' : 'pointer',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                borderRadius: 0, width: 'fit-content'
+              }}>
+                {submitting ? (<><Loader2 size={16} className="animate-spin" /> Submitting...</>) : (<><Send size={16} /> Submit Application</>)}
+              </button>
+            </form>
+          </div>
+        )}
       </div>);
     }
     // ─────────────────────────────────────────
@@ -302,26 +383,16 @@ export default function LeavePage() {
                 {b.leave_type_name || b.leave_type || 'Leave Balance'}
               </div>
               <div style={{ fontSize: 32, fontWeight: 700, color: '#000000', lineHeight: 1, marginBottom: 8, letterSpacing: '-0.02em' }}>
-                {b.remaining_days ?? 12} Days
+                {b.remaining_days ?? 0} Days
               </div>
               <div style={{ fontSize: 13, color: '#767676' }}>
-                {b.used_days ?? 0} used of {b.allocated_days ?? 12} total days
+                {b.used_days ?? 0} used of {b.allocated_days ?? 0} total days
               </div>
-            </div>))) : ([
-            { type: 'Casual Leave', total: 12, used: 0, remaining: 12 },
-            { type: 'Sick Leave', total: 10, used: 0, remaining: 10 },
-            { type: 'Earned Paid Leave', total: 15, used: 0, remaining: 15 },
-        ].map((c) => (<div key={c.type} style={{ background: '#ffffff', border: '1px solid #E6E6E6', padding: 24 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: '#767676', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
-                {c.type}
+            </div>))) : (
+              <div style={{ gridColumn: '1 / -1', background: '#ffffff', border: '1px solid #E6E6E6', padding: 24, textAlign: 'center', color: '#767676' }}>
+                No active leave balances assigned yet.
               </div>
-              <div style={{ fontSize: 32, fontWeight: 700, color: '#000000', lineHeight: 1, marginBottom: 8, letterSpacing: '-0.02em' }}>
-                {c.remaining} Days
-              </div>
-              <div style={{ fontSize: 13, color: '#767676' }}>
-                {c.used} used of {c.total} total days
-              </div>
-            </div>)))}
+            )}
       </div>
 
       {/* Apply Leave Form */}

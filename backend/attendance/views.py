@@ -18,6 +18,9 @@ from .services import (
     AttendanceCalculationService,
 )
 
+from core.utils import get_user_company
+
+
 # Create your views here.
 
 # ==========================================================
@@ -39,23 +42,31 @@ class HolidayListCreateAPIView(
     )
 
     def get_queryset(self):
-
         user = self.request.user
+        company = get_user_company(user)
+        if company:
+            return Holiday.objects.select_related(
+                "company",
+            ).filter(
+                company=company,
+                is_active=True,
+            )
 
         if user.is_superuser:
-
             return Holiday.objects.select_related(
                 "company",
             ).filter(
                 is_active=True,
             )
 
-        return Holiday.objects.select_related(
-            "company",
-        ).filter(
-            company=user.employee_profile.company,
-            is_active=True,
-        )
+        return Holiday.objects.none()
+
+    def perform_create(self, serializer):
+        company = get_user_company(self.request.user)
+        if company:
+            serializer.save(company=company)
+        else:
+            serializer.save()
     
 
 # ==========================================================
@@ -78,20 +89,21 @@ class HolidayRetrieveUpdateDestroyAPIView(
     )
 
     def get_queryset(self):
-
         user = self.request.user
+        company = get_user_company(user)
+        if company:
+            return Holiday.objects.select_related(
+                "company",
+            ).filter(
+                company=company,
+            )
 
         if user.is_superuser:
-
             return Holiday.objects.select_related(
                 "company",
             )
 
-        return Holiday.objects.select_related(
-            "company",
-        ).filter(
-            company=user.employee_profile.company,
-        )
+        return Holiday.objects.none()
 
     def perform_destroy(
         self,
@@ -142,15 +154,16 @@ class CheckInAPIView(
             raise_exception=True,
         )
 
+        company = get_user_company(request.user)
         employee = (
             serializer.validated_data.get("employee")
             or getattr(request.user, "employee_profile", None)
-            or Employee.objects.filter(is_active=True).first()
+            or (Employee.objects.filter(company=company, is_active=True).first() if company else None)
         )
 
         if not employee:
             return Response(
-                {"error": "No active employee profile found to record attendance."},
+                {"error": "No active employee profile found in this company to record attendance."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -203,15 +216,16 @@ class CheckOutAPIView(
             raise_exception=True,
         )
 
+        company = get_user_company(request.user)
         employee = (
             serializer.validated_data.get("employee")
             or getattr(request.user, "employee_profile", None)
-            or Employee.objects.filter(is_active=True).first()
+            or (Employee.objects.filter(company=company, is_active=True).first() if company else None)
         )
 
         if not employee:
             return Response(
-                {"error": "No active employee profile found to record attendance."},
+                {"error": "No active employee profile found in this company to record attendance."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

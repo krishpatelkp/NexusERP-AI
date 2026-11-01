@@ -230,6 +230,9 @@ class UpdateProfileView(APIView):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    def patch(self, request):
+        return self.put(request)
+
 
 # ─────────────────────────────────────────
 # CHANGE PASSWORD VIEW

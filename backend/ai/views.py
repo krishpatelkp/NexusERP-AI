@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.utils import get_user_company
 from .serializers import ChatRequestSerializer
 from .services import AIService
 
@@ -34,7 +35,7 @@ class AIChatAPIView(APIView):
 
         result = service.chat(
             question=question,
-            company=request.user.company,
+            company=get_user_company(request.user),
             user=request.user,
             conversation_history=history,
         )

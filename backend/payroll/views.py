@@ -14,6 +14,8 @@ from rest_framework.exceptions import (
     ValidationError as DRFValidationError,
 )
 
+from core.utils import get_user_company
+
 from .models import (
     PayrollCycle,
     PayrollItem,
@@ -76,7 +78,7 @@ class PayrollCycleCreateAPIView(
         serializer.is_valid(raise_exception=True)
 
         service = PayrollService(
-            company=request.user.employee_profile.company,
+            company=get_user_company(request.user),
             user=request.user,
         )
 
@@ -121,9 +123,7 @@ class PayrollCycleListAPIView(
 
     def get_queryset(self):
 
-        company = (
-            self.request.user.employee_profile.company
-        )
+        company = get_user_company(self.request.user)
 
         return (
             PayrollCycle.objects
@@ -150,9 +150,7 @@ class PayrollCycleDetailAPIView(
 
     def get_queryset(self):
 
-        company = (
-            self.request.user.employee_profile.company
-        )
+        company = get_user_company(self.request.user)
 
         return PayrollCycle.objects.filter(
             company=company,
@@ -182,10 +180,11 @@ class PayrollCycleActivateAPIView(
         cycle = get_object_or_404(
             PayrollCycle.objects.select_related("company"),
             pk=pk,
+            company=get_user_company(request.user),
         )
 
         service = PayrollService(
-            company=request.user.employee_profile.company,
+            company=get_user_company(request.user),
             user=request.user,
         )
 
@@ -226,10 +225,11 @@ class PayrollRunCreateAPIView(
         cycle = get_object_or_404(
             PayrollCycle.objects.select_related("company"),
             pk=pk,
+            company=get_user_company(request.user),
         )
 
         service = PayrollService(
-            company=request.user.employee_profile.company,
+            company=get_user_company(request.user),
             user=request.user,
         )
 
@@ -269,9 +269,7 @@ class PayrollRunListAPIView(
 
     def get_queryset(self):
 
-        company = (
-            self.request.user.employee_profile.company
-        )
+        company = get_user_company(self.request.user)
 
         cycle_pk = self.kwargs["pk"]
 
@@ -305,9 +303,7 @@ class PayrollRunDetailAPIView(
 
     def get_queryset(self):
 
-        company = (
-            self.request.user.employee_profile.company
-        )
+        company = get_user_company(self.request.user)
 
         return (
             PayrollRun.objects
@@ -347,10 +343,11 @@ class PayrollRunProcessAPIView(
                 "cycle", "company",
             ),
             pk=pk,
+            company=get_user_company(request.user),
         )
 
         service = PayrollService(
-            company=request.user.employee_profile.company,
+            company=get_user_company(request.user),
             user=request.user,
         )
 
@@ -393,10 +390,11 @@ class PayrollRunApproveAPIView(
         payroll_run = get_object_or_404(
             PayrollRun.objects.select_related("company"),
             pk=pk,
+            company=get_user_company(request.user),
         )
 
         service = PayrollService(
-            company=request.user.employee_profile.company,
+            company=get_user_company(request.user),
             user=request.user,
         )
 
@@ -441,10 +439,11 @@ class PayrollRunFinalizeAPIView(
         payroll_run = get_object_or_404(
             PayrollRun.objects.select_related("company"),
             pk=pk,
+            company=get_user_company(request.user),
         )
 
         service = PayrollService(
-            company=request.user.employee_profile.company,
+            company=get_user_company(request.user),
             user=request.user,
         )
 
@@ -489,10 +488,11 @@ class PayrollRunCancelAPIView(
         payroll_run = get_object_or_404(
             PayrollRun.objects.select_related("company"),
             pk=pk,
+            company=get_user_company(request.user),
         )
 
         service = PayrollService(
-            company=request.user.employee_profile.company,
+            company=get_user_company(request.user),
             user=request.user,
         )
 
@@ -531,9 +531,7 @@ class PayrollItemListAPIView(
 
     def get_queryset(self):
 
-        company = (
-            self.request.user.employee_profile.company
-        )
+        company = get_user_company(self.request.user)
 
         run_pk = self.kwargs["pk"]
 
@@ -563,9 +561,7 @@ class PayslipListAPIView(
 
     def get_queryset(self):
 
-        company = (
-            self.request.user.employee_profile.company
-        )
+        company = get_user_company(self.request.user)
 
         run_pk = self.kwargs["pk"]
 
@@ -599,9 +595,9 @@ class MyPayslipListAPIView(
 
     def get_queryset(self):
 
-        employee = (
-            self.request.user.employee_profile
-        )
+        employee = getattr(self.request.user, "employee_profile", None)
+        if not employee:
+            return Payslip.objects.none()
 
         return (
             Payslip.objects

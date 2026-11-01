@@ -10,7 +10,6 @@ export default function DashboardPage() {
     useEffect(() => {
         async function loadUserSession() {
             try {
-                await api.autoLogin();
                 const me = await api.getMe();
                 setUser(me);
             }
@@ -25,6 +24,7 @@ export default function DashboardPage() {
         loadUserSession();
     }, [navigate]);
     const handleLogout = () => {
+
         api.clearToken();
         navigate('/login');
     };

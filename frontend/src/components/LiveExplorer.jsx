@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { FadeIn } from './animations';
 import { api } from '../services/api';
 import { Users, Clock, CalendarDays, Wallet, Package, CreditCard, Bell, Search, RefreshCw, CheckCircle2, AlertCircle, Building2, ShieldCheck } from 'lucide-react';
@@ -16,10 +16,7 @@ export default function LiveExplorer() {
     const [payments, setPayments] = useState([]);
     const [notifications, setNotifications] = useState([]);
     const [search, setSearch] = useState('');
-    useEffect(() => {
-        loadLiveData();
-    }, [activeTab]);
-    async function loadLiveData() {
+    const loadLiveData = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
@@ -70,7 +67,10 @@ export default function LiveExplorer() {
         finally {
             setLoading(false);
         }
-    }
+    }, [activeTab]);
+    useEffect(() => {
+        loadLiveData();
+    }, [loadLiveData]);
     const tabs = [
         { id: 'employees', label: 'Employees', icon: Users, count: employees.length },
         { id: 'attendance', label: 'Attendance', icon: Clock },

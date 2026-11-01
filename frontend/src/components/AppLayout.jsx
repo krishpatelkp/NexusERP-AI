@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Users, Clock, CalendarDays, Wallet, Package, CreditCard, BarChart3, Bot, Settings, LogOut, Bell } from 'lucide-react';
+import { api } from '../services/api';
+import { LayoutDashboard, Users, Clock, CalendarDays, Wallet, Package, CreditCard, BarChart3, Bot, Settings, LogOut, Bell, Check, CheckCheck } from 'lucide-react';
 const getPageTitle = (pathname, isAdmin) => {
     switch (pathname) {
         case '/dashboard':
@@ -31,6 +32,78 @@ const getPageTitle = (pathname, isAdmin) => {
 export const AppLayout = ({ children }) => {
     const { user, isAdmin, logout } = useAuth();
     const location = useLocation();
+    const [showNotifications, setShowNotifications] = useState(false);
+    const [notifications, setNotifications] = useState([]);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [loadingNotifications, setLoadingNotifications] = useState(false);
+    const notifRef = useRef(null);
+
+    const loadUnreadCount = async () => {
+        try {
+            const res = await api.getUnreadNotificationCount();
+            setUnreadCount(res?.unread_count || 0);
+        } catch {
+            setUnreadCount(0);
+        }
+    };
+
+    const loadNotifications = async () => {
+        setLoadingNotifications(true);
+        try {
+            const list = await api.getNotifications();
+            setNotifications(list);
+            const count = list.filter(n => !n.is_read).length;
+            setUnreadCount(count);
+        } catch {
+            setNotifications([]);
+        } finally {
+            setLoadingNotifications(false);
+        }
+    };
+
+    useEffect(() => {
+        loadUnreadCount();
+        const interval = setInterval(loadUnreadCount, 45000);
+        return () => clearInterval(interval);
+    }, []);
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (notifRef.current && !notifRef.current.contains(e.target)) {
+                setShowNotifications(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const toggleNotifications = () => {
+        if (!showNotifications) {
+            loadNotifications();
+        }
+        setShowNotifications(!showNotifications);
+    };
+
+    const handleMarkAllRead = async () => {
+        try {
+            await api.markAllNotificationsRead();
+            setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+            setUnreadCount(0);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const handleMarkOneRead = async (id) => {
+        try {
+            await api.markNotificationRead(id);
+            setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+            setUnreadCount(prev => Math.max(0, prev - 1));
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
     const adminNav = [
         { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
         { label: 'Employees', path: '/employees', icon: Users },
@@ -92,7 +165,7 @@ export const AppLayout = ({ children }) => {
 
           <div>
             <div style={{ fontSize: 13, fontWeight: 600, color: '#000', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {user?.company_name || 'Acme Corp'}
+              {user?.company_name || 'Enterprise Workspace'}
             </div>
             <div style={{ marginTop: 4 }}>
               <span style={{
@@ -179,12 +252,116 @@ export const AppLayout = ({ children }) => {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
             {/* Notification Bell */}
-            <div style={{ position: 'relative', cursor: 'pointer' }}>
-              <Bell size={18} color="#000000"/>
-              <span style={{
-            position: 'absolute', top: -2, right: -2, width: 8, height: 8,
-            background: '#FF3B30', borderRadius: '50%', border: '2px solid #ffffff',
-        }}/>
+            <div ref={notifRef} style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={toggleNotifications}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: 6,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 6,
+                  position: 'relative',
+                  color: showNotifications ? '#000000' : '#4b5563',
+                  transition: 'color 0.15s ease',
+                }}
+                title="Notifications"
+              >
+                <Bell size={18} />
+                {unreadCount > 0 && (
+                  <span style={{
+                    position: 'absolute', top: 0, right: 0, minWidth: 16, height: 16,
+                    padding: '0 4px', fontSize: 10, fontWeight: 700,
+                    background: '#EF4444', color: '#ffffff', borderRadius: 8,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    border: '2px solid #ffffff', lineHeight: 1
+                  }}>
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {showNotifications && (
+                <div style={{
+                  position: 'absolute', top: 'calc(100% + 12px)', right: 0,
+                  width: 340, maxHeight: 420, background: '#ffffff',
+                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08)',
+                  borderRadius: 8, border: '1px solid #E6E6E6', overflow: 'hidden',
+                  display: 'flex', flexDirection: 'column', zIndex: 100
+                }}>
+                  <div style={{
+                    padding: '12px 16px', borderBottom: '1px solid #f1f1f1',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    background: '#fafafa'
+                  }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#111' }}>
+                      Notifications {unreadCount > 0 && `(${unreadCount})`}
+                    </span>
+                    {unreadCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleMarkAllRead}
+                        style={{
+                          background: 'none', border: 'none', color: '#2563EB',
+                          fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', gap: 4
+                        }}
+                      >
+                        <CheckCheck size={14} /> Mark all read
+                      </button>
+                    )}
+                  </div>
+
+                  <div style={{ flex: 1, overflowY: 'auto', maxHeight: 340 }}>
+                    {loadingNotifications ? (
+                      <div style={{ padding: 24, textAlign: 'center', color: '#767676', fontSize: 13 }}>
+                        Loading notifications...
+                      </div>
+                    ) : notifications.length === 0 ? (
+                      <div style={{ padding: 32, textAlign: 'center', color: '#767676' }}>
+                        <Bell size={24} style={{ margin: '0 auto 8px', opacity: 0.3 }} />
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#111' }}>No notifications</div>
+                        <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>You're all caught up!</div>
+                      </div>
+                    ) : (
+                      notifications.map((item) => (
+                        <div
+                          key={item.id}
+                          onClick={() => !item.is_read && handleMarkOneRead(item.id)}
+                          style={{
+                            padding: '12px 16px',
+                            borderBottom: '1px solid #f5f5f5',
+                            background: item.is_read ? '#ffffff' : '#f0f7ff',
+                            cursor: item.is_read ? 'default' : 'pointer',
+                            transition: 'background 0.15s ease'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                            <div style={{ fontSize: 13, fontWeight: item.is_read ? 500 : 700, color: '#111' }}>
+                              {item.title}
+                            </div>
+                            {!item.is_read && (
+                              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#2563EB', marginTop: 6, flexShrink: 0 }} />
+                            )}
+                          </div>
+                          <div style={{ fontSize: 12, color: '#555', marginTop: 3, lineHeight: 1.4 }}>
+                            {item.message}
+                          </div>
+                          {item.created_at && (
+                            <div style={{ fontSize: 10, color: '#999', marginTop: 6 }}>
+                              {new Date(item.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             <span style={{ color: '#E6E6E6' }}>|</span>

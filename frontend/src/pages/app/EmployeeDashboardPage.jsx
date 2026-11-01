@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { LogIn, LogOut, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
@@ -6,8 +6,7 @@ export default function EmployeeDashboardPage() {
     const { user } = useAuth();
     const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString());
     // Section 1 State
-    const [attendanceToday, setAttendanceToday] = useState(null);
-    const [leaveBalance, setLeaveBalance] = useState(12);
+    const [leaveBalance, setLeaveBalance] = useState(0);
     const [lastPayslip, setLastPayslip] = useState(null);
     // Section 2 State
     const [clockedIn, setClockedIn] = useState(false);
@@ -35,9 +34,10 @@ export default function EmployeeDashboardPage() {
         }, 1000);
         return () => clearInterval(timer);
     }, []);
-    const loadEmployeeData = async () => {
+    const loadEmployeeData = useCallback(async () => {
         try {
-            const empId = user?.employee_id_number || user?.id || 1;
+            const empId = user?.employee_id || user?.employee_id_number || user?.id;
+            if (!empId) return;
             const [historyData, attData, balances, payslips, leaves, types] = await Promise.all([
                 api.getEmployeeAttendanceHistory(empId).catch(() => []),
                 api.getDailyAttendance().catch(() => []),
@@ -49,9 +49,8 @@ export default function EmployeeDashboardPage() {
             // Check today's record for logged-in employee
             const attList = (historyData && historyData.length > 0) ? historyData : attData;
             if (attList && attList.length > 0) {
-                const todayRec = attList.find((r) => r.employee === user?.id || r.employee_id === user?.id) || attList[0];
+                const todayRec = attList.find((r) => r.employee === user?.employee_id || r.employee_id === user?.employee_id || r.employee === user?.id || r.employee_id === user?.id);
                 if (todayRec) {
-                    setAttendanceToday(todayRec);
                     if (todayRec.check_in) {
                         setClockedIn(true);
                         setCheckInTime(todayRec.check_in);
@@ -65,11 +64,11 @@ export default function EmployeeDashboardPage() {
             // Calculate total available leave days
             const balList = Array.isArray(balances) ? balances : balances?.results || [];
             if (balList && balList.length > 0) {
-                const totalAvail = balList.reduce((sum, b) => sum + (Number(b.remaining_days ?? b.total_allocated ?? 12) || 0), 0);
-                setLeaveBalance(totalAvail || 12);
+                const totalAvail = balList.reduce((sum, b) => sum + (Number(b.remaining_days ?? b.total_allocated ?? 0) || 0), 0);
+                setLeaveBalance(totalAvail);
             }
             else {
-                setLeaveBalance(12);
+                setLeaveBalance(0);
             }
             // Latest payslip
             const slipList = Array.isArray(payslips) ? payslips : payslips?.results || [];
@@ -89,10 +88,10 @@ export default function EmployeeDashboardPage() {
         catch {
             // Silent fallback
         }
-    };
+    }, [user?.employee_id_number, user?.id]);
     useEffect(() => {
         loadEmployeeData();
-    }, []);
+    }, [loadEmployeeData]);
     const handleCheckIn = async () => {
         try {
             const employeeId = user?.employee_id || user?.employee_id_number || user?.id;
@@ -208,10 +207,10 @@ export default function EmployeeDashboardPage() {
             My Last Payslip
           </div>
           <div style={{ fontSize: 32, fontWeight: 700, color: '#000000', lineHeight: 1, marginBottom: 8, letterSpacing: '-0.02em' }}>
-            ₹{lastPayslip ? Number(lastPayslip.net_salary || 85000).toLocaleString() : '85,000'}
+            {lastPayslip ? `₹${Number(lastPayslip.net_salary || 0).toLocaleString()}` : '—'}
           </div>
           <div style={{ fontSize: 13, color: '#767676', fontWeight: 500 }}>
-            {lastPayslip ? `${lastPayslip.month || 'July'} ${lastPayslip.year || 2026} Net Salary` : 'July 2026 Net Salary'}
+            {lastPayslip ? `${lastPayslip.month || ''} ${lastPayslip.year || ''} Net Salary` : 'No payslips issued yet'}
           </div>
         </div>
       </div>

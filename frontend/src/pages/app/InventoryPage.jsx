@@ -41,10 +41,11 @@ export default function InventoryPage() {
         {status || 'Retired'}
       </span>);
     };
-    const totalAssets = assets.length || 2;
+    const totalAssets = assets.length;
     const availableCount = assets.filter((a) => (a.status || '').toUpperCase() === 'AVAILABLE').length;
-    const assignedCount = assets.filter((a) => (a.status || '').toUpperCase() === 'ASSIGNED').length || 2;
+    const assignedCount = assets.filter((a) => (a.status || '').toUpperCase() === 'ASSIGNED').length;
     const maintenanceCount = assets.filter((a) => (a.status || '').toUpperCase().includes('MAINTENANCE')).length;
+
     // Filter employee assets
     const myAssets = assets.filter((a) => a.assigned_to === user?.id ||
         (a.assigned_to_name || '').toLowerCase().includes((user?.first_name || user?.username || '').toLowerCase()));
@@ -124,32 +125,27 @@ export default function InventoryPage() {
                     <td style={{ padding: '14px 12px', fontWeight: 700, color: '#000000' }}>
                       {asset.asset_tag || asset.asset_code || `AST-${asset.id || i + 1001}`}
                     </td>
-                    <td style={{ padding: '14px 12px', fontWeight: 600 }}>{asset.name || 'MacBook Pro 16" M3 Max'}</td>
-                    <td style={{ padding: '14px 12px', color: '#555' }}>{asset.category_name || asset.category || 'Laptop'}</td>
+                    <td style={{ padding: '14px 12px', fontWeight: 600 }}>{asset.name}</td>
+                    <td style={{ padding: '14px 12px', color: '#555' }}>{asset.category_name || asset.category || 'Equipment'}</td>
                     <td style={{ padding: '14px 12px' }}>{renderStatusBadge(asset.status)}</td>
                     <td style={{ padding: '14px 12px', color: '#000000', fontWeight: 500 }}>
-                      {asset.assigned_to_name || (asset.status === 'ASSIGNED' || asset.status === 'Assigned' ? 'Krish Patel' : 'Unassigned')}
+                      {asset.assigned_to_name || (asset.status === 'ASSIGNED' || asset.status === 'Assigned' ? 'Assigned' : 'Unassigned')}
                     </td>
-                    <td style={{ padding: '14px 12px', color: '#555' }}>{asset.vendor || 'Apple Business'}</td>
+                    <td style={{ padding: '14px 12px', color: '#555' }}>{asset.vendor || '—'}</td>
                   </tr>))}
-                {assets.length === 0 && (<>
-                    <tr style={{ borderBottom: '1px solid #E6E6E6' }}>
-                      <td style={{ padding: '14px 12px', fontWeight: 700 }}>AST-1001</td>
-                      <td style={{ padding: '14px 12px', fontWeight: 600 }}>MacBook Pro 16" M3 Max</td>
-                      <td style={{ padding: '14px 12px', color: '#555' }}>Laptop</td>
-                      <td style={{ padding: '14px 12px' }}>{renderStatusBadge('ASSIGNED')}</td>
-                      <td style={{ padding: '14px 12px', fontWeight: 500 }}>Krish Patel</td>
-                      <td style={{ padding: '14px 12px', color: '#555' }}>Apple Inc</td>
-                    </tr>
-                    <tr style={{ borderBottom: '1px solid #E6E6E6' }}>
-                      <td style={{ padding: '14px 12px', fontWeight: 700 }}>AST-1002</td>
-                      <td style={{ padding: '14px 12px', fontWeight: 600 }}>Dell UltraSharp 32" 4K Monitor</td>
-                      <td style={{ padding: '14px 12px', color: '#555' }}>Monitor</td>
-                      <td style={{ padding: '14px 12px' }}>{renderStatusBadge('ASSIGNED')}</td>
-                      <td style={{ padding: '14px 12px', fontWeight: 500 }}>Krish Patel</td>
-                      <td style={{ padding: '14px 12px', color: '#555' }}>Dell India</td>
-                    </tr>
-                  </>)}
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} style={{ padding: '24px 12px', textAlign: 'center', color: '#767676' }}>
+                      Loading asset inventory...
+                    </td>
+                  </tr>
+                ) : assets.length === 0 && (
+                  <tr>
+                    <td colSpan={6} style={{ padding: '32px 12px', textAlign: 'center', color: '#767676' }}>
+                      No enterprise hardware or software assets recorded yet for this workspace.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -159,10 +155,7 @@ export default function InventoryPage() {
     // ─────────────────────────────────────────
     // EMPLOYEE VIEW
     // ─────────────────────────────────────────
-    const displayMyAssets = myAssets.length > 0 ? myAssets : [
-        { id: 1, asset_tag: 'AST-1001', name: 'MacBook Pro 16" M3 Max', category: 'Laptop', assigned_date: '2024-01-15' },
-        { id: 2, asset_tag: 'AST-1002', name: 'Dell UltraSharp 32" 4K Monitor', category: 'Monitor', assigned_date: '2024-02-01' },
-    ];
+    const displayMyAssets = myAssets;
     return (<div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
       <div>
         <h1 className="heading-lg" style={{ fontSize: 28, marginBottom: 4 }}>My Assigned Hardware Assets</h1>
@@ -192,13 +185,20 @@ export default function InventoryPage() {
                   </td>
                   <td style={{ padding: '14px 12px', fontWeight: 600 }}>{asset.name}</td>
                   <td style={{ padding: '14px 12px', color: '#555' }}>{asset.category_name || asset.category || 'Hardware'}</td>
-                  <td style={{ padding: '14px 12px', color: '#555' }}>{asset.assigned_date || '2024-01-15'}</td>
+                  <td style={{ padding: '14px 12px', color: '#555' }}>{asset.assigned_date || '—'}</td>
                   <td style={{ padding: '14px 12px' }}>
                     <span style={{ padding: '3px 8px', background: '#E8F0FE', color: '#1A73E8', fontSize: 11, fontWeight: 700 }}>
                       Assigned to Me
                     </span>
                   </td>
                 </tr>))}
+              {displayMyAssets.length === 0 && (
+                <tr>
+                  <td colSpan={5} style={{ padding: '32px 12px', textAlign: 'center', color: '#767676' }}>
+                    No hardware devices or assets currently assigned to your profile.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

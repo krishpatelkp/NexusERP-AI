@@ -9,12 +9,25 @@ export default function AICopilotPage() {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
-    const [aiStatus, setAiStatus] = useState('online');
+    const [aiStatus, setAiStatus] = useState('checking');
+    const [modelName, setModelName] = useState('qwen3:8b');
     const [conversations, setConversations] = useState([
         { id: 'c1', title: 'Enterprise Operations' },
     ]);
     const [activeConvId, setActiveConvId] = useState('c1');
     const messagesEndRef = useRef(null);
+
+    useEffect(() => {
+        api.getAIHealth().then((health) => {
+            if (health) {
+                setAiStatus(health.status || (health.ollama_available ? 'online' : 'offline'));
+                if (health.model) setModelName(health.model);
+            }
+        }).catch(() => {
+            setAiStatus('offline');
+        });
+    }, []);
+
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, loading]);
@@ -57,10 +70,13 @@ export default function AICopilotPage() {
             setMessages((prev) => [...prev, aiMsg]);
         }
         catch (err) {
+            const isConnErr = err.message?.includes('500') || err.message?.includes('Failed') || aiStatus === 'offline';
             const errorMsg = {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
-                content: `Error executing AI query: ${err.message || 'Server connection timeout.'}`,
+                content: isConnErr
+                    ? 'The local Ollama AI model is currently offline or unreachable. To enable AI neural database queries, ensure Ollama is installed and running (`ollama serve`) with the configured model.'
+                    : `Error executing AI query: ${err.message || 'Server connection timeout.'}`,
             };
             setMessages((prev) => [...prev, errorMsg]);
         }
@@ -147,16 +163,16 @@ export default function AICopilotPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             {/* Model Name Badge */}
             <span style={{ padding: '3px 8px', background: 'rgba(255,255,255,0.1)', color: '#cccccc', fontSize: 11, fontWeight: 600, fontFamily: 'monospace' }}>
-              Model: qwen3:8b
+              Model: {modelName}
             </span>
 
             {/* Online Status Indicator */}
             <span style={{
-            padding: '3px 10px', background: '#137333', color: '#ffffff',
+            padding: '3px 10px', background: aiStatus === 'online' ? '#137333' : '#B06000', color: '#ffffff',
             fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6,
         }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#28C840' }}/>
-              ONLINE
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: aiStatus === 'online' ? '#28C840' : '#FF9500' }}/>
+              {aiStatus === 'online' ? 'ONLINE' : aiStatus === 'checking' ? 'CHECKING...' : 'OFFLINE'}
             </span>
           </div>
         </header>

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { ChevronDown, ArrowRight, Menu, X } from 'lucide-react';
-import { api } from '../services/api';
 const products = [
     { label: 'HR & Employee Directory', href: '/dashboard' },
     { label: 'Attendance Tracker', href: '/dashboard' },
@@ -19,8 +18,6 @@ export default function Navbar() {
     const [scrolled, setScrolled] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
     const [dropdown, setDropdown] = useState(null);
-    const [token, setToken] = useState(api.getToken());
-    const navigate = useNavigate();
     useEffect(() => {
         const handler = () => setScrolled(window.scrollY > 10);
         window.addEventListener('scroll', handler, { passive: true });
