@@ -472,10 +472,32 @@ class EmployeeListCreateAPIView(
             emp = serializer.save()
             target_company = serializer.validated_data['company']
         elif company:
-            serializer.save(company=company)
+            emp = serializer.save(company=company)
+            target_company = company
         else:
             from rest_framework.exceptions import ValidationError
             raise ValidationError({"company": "User is not associated with any active company."})
+
+        # Auto-initialize leave balances for the newly created employee
+        try:
+            from leave_management.models import LeaveType, LeaveBalance
+            from django.utils import timezone
+            from django.db.models import Q
+            current_year = timezone.now().year
+            for lt in LeaveType.objects.filter(Q(company=target_company) | Q(company__isnull=True), is_active=True):
+                LeaveBalance.objects.get_or_create(
+                    employee=emp,
+                    leave_type=lt,
+                    company=target_company,
+                    year=current_year,
+                    defaults={
+                        "allocated_days": lt.max_days_per_year,
+                        "used_days": 0,
+                        "remaining_days": lt.max_days_per_year,
+                    }
+                )
+        except Exception:
+            pass
 
 
 
